@@ -13,6 +13,7 @@ fn main() raises:
     print("=" * 60)
     
     var np = Python.import_module("numpy")
+    var builtins = Python.import_module("builtins")
     
     # Configuration
     var num_epochs = 50
@@ -51,14 +52,15 @@ fn main() raises:
             var seed = epoch * num_batches + batch_idx
             np.random.seed(seed)
             
-            # Create synthetic volume - use Python list for shape
+            # Create synthetic volume
             var x = np.random.randn(batch_size, 1, input_size, input_size, input_size)
             
-            # Create one-hot labels
-            var y = np.zeros(Python.list([batch_size, num_classes]))
+            # Create one-hot labels using a workaround
+            var shape = builtins.tuple([batch_size, num_classes])
+            var y = np.zeros(shape)
             for b in range(batch_size):
                 var class_idx = (seed + b) % num_classes
-                _ = y.__setitem__(Python.list([b, class_idx]), 1.0)
+                y[b][class_idx] = 1.0
             
             # Forward pass
             var flat_x = x.reshape(batch_size, -1)
