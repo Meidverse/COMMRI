@@ -5,21 +5,21 @@ Simplified standalone training script for Mojo.
 """
 
 from python import Python
+from python.object import PythonObject
 
 
-fn create_synthetic_volume(batch_size: Int, depth: Int, height: Int, width: Int, seed: Int) -> PythonObject:
+fn create_synthetic_volume(batch_size: Int, depth: Int, height: Int, width: Int, seed: Int) raises -> PythonObject:
     """Create synthetic MRI volume using NumPy."""
     var np = Python.import_module("numpy")
     np.random.seed(seed)
     
     # Create random volume
-    var shape = Python.tuple([batch_size, 1, depth, height, width])
     var volume = np.random.randn(batch_size, 1, depth, height, width).astype(np.float32)
     
     return volume
 
 
-fn create_synthetic_labels(batch_size: Int, num_classes: Int, seed: Int) -> PythonObject:
+fn create_synthetic_labels(batch_size: Int, num_classes: Int, seed: Int) raises -> PythonObject:
     """Create one-hot encoded labels."""
     var np = Python.import_module("numpy")
     np.random.seed(seed)
@@ -32,7 +32,7 @@ fn create_synthetic_labels(batch_size: Int, num_classes: Int, seed: Int) -> Pyth
     return labels
 
 
-fn simple_forward(weights: PythonObject, x: PythonObject) -> PythonObject:
+fn simple_forward(weights: PythonObject, x: PythonObject) raises -> PythonObject:
     """Simple forward pass - single linear layer for demo."""
     var np = Python.import_module("numpy")
     
@@ -50,29 +50,27 @@ fn simple_forward(weights: PythonObject, x: PythonObject) -> PythonObject:
     return softmax
 
 
-fn compute_loss(pred: PythonObject, target: PythonObject) -> Float64:
+fn compute_loss(np: PythonObject, pred: PythonObject, target: PythonObject) raises -> Float64:
     """Cross-entropy loss."""
-    var np = Python.import_module("numpy")
-    
     # Clip predictions to avoid log(0)
     var eps = 1e-7
     var pred_clipped = np.clip(pred, eps, 1.0 - eps)
     
     # Cross-entropy: -sum(target * log(pred))
-    var loss = -np.sum(target * np.log(pred_clipped)) / Float64(pred.shape[0])
+    var batch = Float64(pred.shape[0])
+    var loss = -np.sum(target * np.log(pred_clipped)) / batch
     
     return Float64(loss)
 
 
-fn compute_accuracy(pred: PythonObject, target: PythonObject) -> Float64:
+fn compute_accuracy(np: PythonObject, pred: PythonObject, target: PythonObject) raises -> Float64:
     """Compute classification accuracy."""
-    var np = Python.import_module("numpy")
-    
     var pred_classes = np.argmax(pred, axis=1)
     var true_classes = np.argmax(target, axis=1)
     var correct = np.sum(pred_classes == true_classes)
+    var batch = Float64(pred.shape[0])
     
-    return Float64(correct) / Float64(pred.shape[0])
+    return Float64(correct) / batch
 
 
 fn main() raises:
@@ -88,7 +86,7 @@ fn main() raises:
     var num_batches = 20
     var num_classes = 2
     var input_size = 32  # Smaller for demo
-    var learning_rate: Float64 = 0.001
+    var learning_rate = 0.001
     
     print("\nConfiguration:")
     print("  Epochs:", num_epochs)
@@ -109,11 +107,11 @@ fn main() raises:
     print("\nStarting training...")
     print("-" * 60)
     
-    var best_loss: Float64 = 1000000.0
+    var best_loss = 1000000.0
     
     for epoch in range(num_epochs):
-        var epoch_loss: Float64 = 0.0
-        var epoch_acc: Float64 = 0.0
+        var epoch_loss = 0.0
+        var epoch_acc = 0.0
         
         for batch_idx in range(num_batches):
             # Create synthetic batch
@@ -125,15 +123,16 @@ fn main() raises:
             var pred = simple_forward(weights, x)
             
             # Compute loss and accuracy
-            var loss = compute_loss(pred, y)
-            var acc = compute_accuracy(pred, y)
+            var loss = compute_loss(np, pred, y)
+            var acc = compute_accuracy(np, pred, y)
             
             epoch_loss += loss
             epoch_acc += acc
             
             # Simple gradient descent update
             # Gradient of cross-entropy w.r.t. softmax output
-            var grad_pred = (pred - y) / Float64(batch_size)
+            var batch_f = Float64(batch_size)
+            var grad_pred = (pred - y) / batch_f
             
             # Gradient w.r.t. weights
             var flat_x = x.reshape(batch_size, -1)
@@ -145,8 +144,9 @@ fn main() raises:
             weights["b"] = weights["b"] - learning_rate * grad_b
         
         # Average metrics
-        var avg_loss = epoch_loss / Float64(num_batches)
-        var avg_acc = epoch_acc / Float64(num_batches)
+        var num_batches_f = Float64(num_batches)
+        var avg_loss = epoch_loss / num_batches_f
+        var avg_acc = epoch_acc / num_batches_f
         
         # Track best
         if avg_loss < best_loss:
