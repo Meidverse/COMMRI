@@ -118,7 +118,7 @@ def create_data_loader(data_dir, target_size, batch_size, num_classes=2):
     y_list = []
     
     print(f"Found {len(files)} NIfTI files")
-    for f in tqdm(files[:50], desc="Loading data"):  # Limit to 50 for memory
+    for f in tqdm(files, desc="Loading data"):  # Load ALL files
         data = load_and_preprocess(f, target_size)
         if data is not None:
             X_list.append(data)
