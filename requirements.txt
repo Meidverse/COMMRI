@@ -1,4 +1,9 @@
 # MRI Image Classification System - Python Dependencies
+
+# Deep Learning (GPU acceleration)
+torch>=2.0.0
+torchvision>=0.15.0
+
 # Medical Imaging I/O
 nibabel>=5.2.0              # NIfTI file support
 pydicom>=2.4.0              # DICOM file support
