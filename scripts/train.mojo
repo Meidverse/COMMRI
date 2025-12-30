@@ -34,8 +34,8 @@ fn main() raises:
     print("  Input features:", input_features)
     
     np.random.seed(42)
-    var weights_W = np.random.randn(input_features, num_classes).astype(np.float32) * 0.01
-    var weights_b = np.zeros(num_classes, dtype=np.float32)
+    var weights_W = np.random.randn(input_features, num_classes) * 0.01
+    var weights_b = np.zeros(num_classes)
     
     print("\nStarting training...")
     print("-" * 60)
@@ -51,14 +51,14 @@ fn main() raises:
             var seed = epoch * num_batches + batch_idx
             np.random.seed(seed)
             
-            # Create synthetic volume
-            var x = np.random.randn(batch_size, 1, input_size, input_size, input_size).astype(np.float32)
+            # Create synthetic volume - use Python list for shape
+            var x = np.random.randn(batch_size, 1, input_size, input_size, input_size)
             
             # Create one-hot labels
-            var y = np.zeros((batch_size, num_classes), dtype=np.float32)
+            var y = np.zeros(Python.list([batch_size, num_classes]))
             for b in range(batch_size):
                 var class_idx = (seed + b) % num_classes
-                y[b, class_idx] = 1.0
+                _ = y.__setitem__(Python.list([b, class_idx]), 1.0)
             
             # Forward pass
             var flat_x = x.reshape(batch_size, -1)
