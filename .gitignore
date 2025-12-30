@@ -28,12 +28,12 @@ data/raw/
 data/processed/
 
 # Model checkpoints (large files)
-checkpoints/
-*.bin
-*.pt
-*.pth
-*.onnx
-*.h5
+# checkpoints/
+# *.bin
+# *.pt
+# *.pth
+# *.onnx
+# *.h5
 
 # Logs
 logs/
