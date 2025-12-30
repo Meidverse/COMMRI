@@ -213,7 +213,7 @@ print(f"Data loader ready: {len(loader)} batches")
         # Track best
         if acc > best_acc:
             best_acc = acc
-            _ = globals_dict["torch"].save(model.state_dict(), "best_model.pth")
+            _ = globals_dict["torch"].save(model.state_dict(), "ixi_3dcnn_best.pth")
         
         # Update progress bar
         _ = epoch_pbar.set_postfix(loss=loss, acc=acc, best=best_acc, lr=current_lr)
@@ -222,5 +222,5 @@ print(f"Data loader ready: {len(loader)} batches")
     print("Training Complete!")
     print("=" * 70)
     print("Best Accuracy:", best_acc)
-    print("Model saved to: best_model.pth")
+    print("Model saved to: ixi_3dcnn_best.pth")
     print("=" * 70)

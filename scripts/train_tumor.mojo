@@ -333,7 +333,7 @@ def validate(model, loader, criterion, device):
         # Save best
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            _ = globals_dict["torch"].save(model.state_dict(), "best_tumor_model.pth")
+            _ = globals_dict["torch"].save(model.state_dict(), "kaggle_tumor_2dcnn_best.pth")
         
         # Update progress
         _ = epoch_pbar.set_postfix(
@@ -345,13 +345,13 @@ def validate(model, loader, criterion, device):
         )
     
     # Save final model
-    _ = globals_dict["torch"].save(model.state_dict(), "tumor_model_final.pth")
+    _ = globals_dict["torch"].save(model.state_dict(), "kaggle_tumor_2dcnn_final.pth")
     
     print("\n" + "=" * 70)
     print("Training Complete!")
     print("=" * 70)
     print("Best Validation Accuracy:", best_val_acc)
     print("Models saved:")
-    print("  - best_tumor_model.pth (best validation)")
-    print("  - tumor_model_final.pth (final epoch)")
+    print("  - kaggle_tumor_2dcnn_best.pth (best validation)")
+    print("  - kaggle_tumor_2dcnn_final.pth (final epoch)")
     print("=" * 70)
