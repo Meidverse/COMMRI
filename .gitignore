@@ -1,0 +1,53 @@
+# MRI Classification - Dependencies
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Mojo build artifacts
+*.mojopkg
+*.🔥
+
+# Data files (too large for git)
+*.nii
+*.nii.gz
+*.dcm
+*.dicom
+data/raw/
+data/processed/
+
+# Model checkpoints (large files)
+checkpoints/
+*.bin
+*.pt
+*.pth
+*.onnx
+*.h5
+
+# Logs
+logs/
+*.log
+tensorboard/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/

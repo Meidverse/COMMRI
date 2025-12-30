@@ -1,0 +1,20 @@
+# MRI Image Classification System - Python Dependencies
+# Medical Imaging I/O
+nibabel>=5.2.0              # NIfTI file support
+pydicom>=2.4.0              # DICOM file support
+SimpleITK>=2.3.0            # Medical image processing
+
+# Numerical Computing
+numpy>=1.26.0               # Array operations
+scipy>=1.12.0               # Resampling, transforms
+
+# Machine Learning Utilities
+scikit-learn>=1.4.0         # Metrics, train/test split
+
+# Visualization
+matplotlib>=3.8.0           # Plotting
+
+# Utilities
+tqdm>=4.66.0                # Progress bars
+h5py>=3.10.0                # HDF5 file support for checkpoints
+pyyaml>=6.0.0               # Configuration files
