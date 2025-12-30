@@ -27,7 +27,6 @@ fn main() raises:
     var tqdm_module = Python.import_module("tqdm")
     var tqdm = tqdm_module.tqdm
     var builtins = Python.import_module("builtins")
-    var scipy_ndimage = Python.import_module("scipy.ndimage")
     
     # Check GPU availability
     var device_str = "cpu"
@@ -54,16 +53,21 @@ fn main() raises:
     print("  Input size:", input_size, "^3")
     print("  Device:", device_str)
     
-    # Define 3D CNN model in Python
-    var model_code = """
+    # Define and create model using exec
+    var setup_code = """
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+from scipy.ndimage import zoom
+import nibabel as nib
+from tqdm import tqdm
+import glob
+import os
 
 class CNN3D(nn.Module):
     def __init__(self, num_classes=2):
         super(CNN3D, self).__init__()
-        # Encoder
         self.conv1 = nn.Conv3d(1, 32, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm3d(32)
         self.conv2 = nn.Conv3d(32, 64, kernel_size=3, padding=1)
@@ -75,103 +79,71 @@ class CNN3D(nn.Module):
         
         self.pool = nn.MaxPool3d(2)
         self.dropout = nn.Dropout3d(0.3)
-        
-        # Global Average Pooling + Classifier
         self.gap = nn.AdaptiveAvgPool3d(1)
         self.fc1 = nn.Linear(256, 128)
         self.fc2 = nn.Linear(128, num_classes)
     
     def forward(self, x):
-        # Block 1
         x = self.pool(F.relu(self.bn1(self.conv1(x))))
-        # Block 2
         x = self.pool(F.relu(self.bn2(self.conv2(x))))
         x = self.dropout(x)
-        # Block 3
         x = self.pool(F.relu(self.bn3(self.conv3(x))))
-        # Block 4
         x = self.pool(F.relu(self.bn4(self.conv4(x))))
         x = self.dropout(x)
-        
-        # Classifier
         x = self.gap(x)
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
 
-model = CNN3D(num_classes=2)
-"""
-    
-    # Execute model definition
-    var exec_globals = Python.dict()
-    _ = builtins.exec(model_code, exec_globals)
-    var model = exec_globals["model"]
-    _ = model.to(device)
-    
-    # Count parameters
-    var total_params = builtins.sum(p.numel() for p in model.parameters())
-    print("  Model parameters:", total_params)
-    
-    # Loss and optimizer
-    var criterion = torch_nn.CrossEntropyLoss()
-    var optimizer = torch_optim.Adam(model.parameters(), lr=learning_rate)
-    var scheduler = torch_optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
-    
-    # Find NIfTI files
-    print("\nSearching for NIfTI files...")
-    var nii_files = glob.glob(data_dir + "/**/*.nii.gz", recursive=True)
-    var nii_list = builtins.list(nii_files)
-    var num_files = builtins.len(nii_list)
-    print("  Found", num_files, "NIfTI files")
-    
-    if num_files == 0:
-        print("\n⚠️  No NIfTI files found. Generating synthetic data...")
-        # Generate synthetic data if no real data
-        var num_synthetic = 20
-        var X_data = torch.randn(num_synthetic, 1, input_size, input_size, input_size)
-        var y_data = torch.randint(0, num_classes, builtins.tuple([num_synthetic]))
-    else:
-        print("  Loading and preprocessing NIfTI files...")
-    
-    # Training function
-    var train_code = """
-import torch
-import numpy as np
-from scipy.ndimage import zoom
-import nibabel as nib
-from tqdm import tqdm
-import glob
-import os
-
 def load_and_preprocess(file_path, target_size=64):
-    '''Load NIfTI and resize to target size.'''
     try:
         img = nib.load(file_path)
         data = img.get_fdata().astype(np.float32)
-        
-        # Take middle slice if 4D
         if len(data.shape) == 4:
             data = data[:,:,:,0]
-        
-        # Resize to target
         zoom_factors = [target_size / s for s in data.shape]
         data = zoom(data, zoom_factors, order=1)
-        
-        # Normalize
         data = (data - data.mean()) / (data.std() + 1e-8)
-        
         return data
-    except:
+    except Exception as e:
+        print(f"Error loading {file_path}: {e}")
         return None
 
-def train_epoch(model, data_loader, criterion, optimizer, device):
+def create_data_loader(data_dir, target_size, batch_size, num_classes=2):
+    files = glob.glob(os.path.join(data_dir, '**/*.nii.gz'), recursive=True)
+    files += glob.glob(os.path.join(data_dir, '**/*.nii'), recursive=True)
+    
+    X_list = []
+    y_list = []
+    
+    print(f"Found {len(files)} NIfTI files")
+    for f in tqdm(files[:50], desc="Loading data"):  # Limit to 50 for memory
+        data = load_and_preprocess(f, target_size)
+        if data is not None:
+            X_list.append(data)
+            label = 0 if 'healthy' in f.lower() or 'ixi' in f.lower() else 1
+            y_list.append(label)
+    
+    if len(X_list) == 0:
+        print("No valid files, generating synthetic data...")
+        X = torch.randn(20, 1, target_size, target_size, target_size)
+        y = torch.randint(0, num_classes, (20,))
+    else:
+        X = torch.tensor(np.stack(X_list)).unsqueeze(1)
+        y = torch.tensor(y_list)
+    
+    dataset = torch.utils.data.TensorDataset(X, y)
+    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    return loader
+
+def train_epoch(model, loader, criterion, optimizer, device):
     model.train()
     total_loss = 0
     correct = 0
     total = 0
     
-    for batch_x, batch_y in data_loader:
+    for batch_x, batch_y in loader:
         batch_x = batch_x.to(device)
         batch_y = batch_y.to(device)
         
@@ -186,57 +158,40 @@ def train_epoch(model, data_loader, criterion, optimizer, device):
         total += batch_y.size(0)
         correct += predicted.eq(batch_y).sum().item()
     
-    return total_loss / len(data_loader), correct / total
+    return total_loss / len(loader), correct / total
 
-def create_data_loader(data_dir, target_size, batch_size, num_classes=2):
-    '''Create data loader from NIfTI files.'''
-    files = glob.glob(os.path.join(data_dir, '**/*.nii.gz'), recursive=True)
-    files += glob.glob(os.path.join(data_dir, '**/*.nii'), recursive=True)
-    
-    X_list = []
-    y_list = []
-    
-    print(f"Loading {len(files)} files...")
-    for i, f in enumerate(tqdm(files[:100], desc="Loading data")):  # Limit to 100 for memory
-        data = load_and_preprocess(f, target_size)
-        if data is not None:
-            X_list.append(data)
-            # Assign label based on directory name (healthy=0, other=1)
-            label = 0 if 'healthy' in f.lower() or 'ixi' in f.lower() else 1
-            y_list.append(label)
-    
-    if len(X_list) == 0:
-        # Generate synthetic if no valid files
-        print("Generating synthetic data...")
-        X = torch.randn(20, 1, target_size, target_size, target_size)
-        y = torch.randint(0, num_classes, (20,))
-    else:
-        X = torch.tensor(np.stack(X_list)).unsqueeze(1)  # Add channel dim
-        y = torch.tensor(y_list)
-    
-    dataset = torch.utils.data.TensorDataset(X, y)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
-    return loader
+# Initialize
+model = CNN3D(num_classes)
+model = model.to(device)
+total_params = sum(p.numel() for p in model.parameters())
+print(f"Model parameters: {total_params:,}")
 
-# Create loader
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
+
 loader = create_data_loader(data_dir, target_size, batch_size, num_classes)
 print(f"Data loader ready: {len(loader)} batches")
 """
     
-    # Execute training setup
-    var train_globals = Python.dict()
-    train_globals["model"] = model
-    train_globals["criterion"] = criterion
-    train_globals["optimizer"] = optimizer
-    train_globals["device"] = device
-    train_globals["data_dir"] = data_dir
-    train_globals["target_size"] = input_size
-    train_globals["batch_size"] = batch_size
-    train_globals["num_classes"] = num_classes
+    # Execute setup
+    var globals_dict = Python.dict()
+    globals_dict["device"] = device
+    globals_dict["data_dir"] = data_dir
+    globals_dict["target_size"] = input_size
+    globals_dict["batch_size"] = batch_size
+    globals_dict["num_classes"] = num_classes
+    globals_dict["learning_rate"] = learning_rate
+    globals_dict["num_epochs"] = num_epochs
     
-    _ = builtins.exec(train_code, train_globals)
-    var loader = train_globals["loader"]
-    var train_epoch_fn = train_globals["train_epoch"]
+    _ = builtins.exec(setup_code, globals_dict)
+    
+    var model = globals_dict["model"]
+    var criterion = globals_dict["criterion"]
+    var optimizer = globals_dict["optimizer"]
+    var scheduler = globals_dict["scheduler"]
+    var loader = globals_dict["loader"]
+    var train_epoch_fn = globals_dict["train_epoch"]
     
     print("\n" + "=" * 70)
     print("Starting Training...")
@@ -246,8 +201,6 @@ print(f"Data loader ready: {len(loader)} batches")
     var epoch_pbar = tqdm(builtins.range(num_epochs), desc="Training", unit="epoch")
     
     for epoch in epoch_pbar:
-        var epoch_int = Int(epoch)
-        
         # Train one epoch
         var result = train_epoch_fn(model, loader, criterion, optimizer, device)
         var loss = Float64(result[0])
@@ -260,8 +213,7 @@ print(f"Data loader ready: {len(loader)} batches")
         # Track best
         if acc > best_acc:
             best_acc = acc
-            # Save best model
-            _ = torch.save(model.state_dict(), "best_model.pth")
+            _ = globals_dict["torch"].save(model.state_dict(), "best_model.pth")
         
         # Update progress bar
         _ = epoch_pbar.set_postfix(loss=loss, acc=acc, best=best_acc, lr=current_lr)
