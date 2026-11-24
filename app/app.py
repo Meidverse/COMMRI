@@ -460,6 +460,13 @@ def too_big(_e):
     return redirect(url_for("analyze"))
 
 
+if os.environ.get("AUTO_DEMO") == "1":  # hosting: fill an empty database with demo data in the background
+    import threading
+
+    import demo_seed
+    threading.Thread(target=demo_seed.run, args=(app,), daemon=True).start()
+
+
 if __name__ == "__main__":
     print("NeuroScan AI running at http://127.0.0.1:5000")
     app.run(host="127.0.0.1", port=5000, debug=False)
