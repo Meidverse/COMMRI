@@ -16,12 +16,8 @@ os.chdir(os.path.join(ROOT, "app"))
 
 import db as dbm  # noqa: E402
 
-if os.path.exists(dbm.INSTANCE):
-    for p in (dbm.DB_PATH, dbm.UPLOADS):
-        if os.path.isdir(p):
-            shutil.rmtree(p)
-        elif os.path.exists(p):
-            os.remove(p)
+dbm.reset_db()  # works for SQLite and PostgreSQL (DATABASE_URL)
+shutil.rmtree(dbm.UPLOADS, ignore_errors=True)
 
 from werkzeug.security import generate_password_hash  # noqa: E402
 
@@ -108,6 +104,6 @@ for n, (pi, mod, path, uidx, part) in enumerate(order, 1):
         login(1 if mod == "mri" else 2)
         client.post(f"/analysis/{aid}/remarks", data={"remarks": REMARKS[aid]})
 
-for row in dbm.connect().execute("SELECT analysis_code, modality, label, round(confidence*100,1) FROM analyses"):
-    print(tuple(row))
+for row in dbm.connect().execute("SELECT analysis_code, modality, label, confidence FROM analyses ORDER BY id").fetchall():
+    print((row[0], row[1], row[2], round(row[3] * 100, 1)))
 print("Seed complete.")

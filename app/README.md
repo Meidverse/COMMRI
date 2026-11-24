@@ -10,6 +10,25 @@ Double-click `app\run.bat`, or:
 python app\app.py      # then open http://127.0.0.1:5000
 ```
 
+## Database
+- Local: SQLite file `app/instance/neuroscan.db` (created automatically).
+- Hosted: PostgreSQL — set `DATABASE_URL` and the app uses it automatically.
+- Tables: `users`, `patients`, `analyses`, `images` (scan images are stored in the database, so no disk is needed).
+
+## Hosting on Render
+1. Push the repo to GitHub (already done).
+2. Render Dashboard → **New → Blueprint** → choose this repository. `render.yaml` creates:
+   - `neuroscan-db` — PostgreSQL 16 (Singapore)
+   - `neuroscan-ai` — web service (gunicorn, CPU-only PyTorch)
+3. Enter `ADMIN_EMAIL` and `ADMIN_PASSWORD` when asked — that account is created on first start.
+4. Open the service URL, sign in as admin, add doctors under Doctor Management; patients self-register.
+
+Optional: load the demo data into the hosted DB from your PC (uses the local datasets):
+```
+$env:DATABASE_URL="<External Database URL from Render>"; python scripts\seed_demo.py
+```
+Other hosts (Railway, Heroku-style): `Procfile` + `requirements-render.txt`, set `DATABASE_URL`, `SECRET_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+
 ## Demo accounts (created by `python scripts\seed_demo.py`, which RESETS the database)
 | Role | Sign in with | Password |
 |---|---|---|

@@ -10,11 +10,13 @@ Run:  python app\\app.py   then open http://127.0.0.1:5000
 import json
 import os
 import secrets
+import shutil
+import tempfile
 from datetime import datetime
 from functools import wraps
 
-from flask import (Flask, abort, flash, g, redirect, render_template, request,
-                   send_from_directory, session, url_for)
+from flask import (Flask, Response, abort, flash, g, redirect, render_template, request,
+                   session, url_for)
 from PIL import Image, UnidentifiedImageError
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -22,17 +24,41 @@ import db as dbm
 import ml
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+IMAGE_NAMES = ("original.png", "resized.png", "normalized.png", "enhanced.png")
 ROLES = {"admin": "Administrator", "doctor": "Doctor", "patient": "Patient"}
 ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "patient": "NS-PA-"}
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 dbm.init_db()
-_key_file = os.path.join(dbm.INSTANCE, "secret.key")
-if not os.path.exists(_key_file):
-    with open(_key_file, "w") as fh:
-        fh.write(secrets.token_hex(32))
-app.secret_key = open(_key_file).read().strip()
+if os.environ.get("SECRET_KEY"):
+    app.secret_key = os.environ["SECRET_KEY"]
+else:  # local development: keep a generated key in the instance folder
+    os.makedirs(dbm.INSTANCE, exist_ok=True)
+    _key_file = os.path.join(dbm.INSTANCE, "secret.key")
+    if not os.path.exists(_key_file):
+        with open(_key_file, "w") as fh:
+            fh.write(secrets.token_hex(32))
+    app.secret_key = open(_key_file).read().strip()
+if os.environ.get("RENDER") or os.environ.get("FORCE_HTTPS"):  # Render sets RENDER=true; HTTPS only there
+    app.config.update(SESSION_COOKIE_SECURE=True, SESSION_COOKIE_SAMESITE="Lax")
+
+
+def bootstrap_admin():
+    """On a fresh database, create the administrator from ADMIN_EMAIL / ADMIN_PASSWORD env vars."""
+    email, pw = os.environ.get("ADMIN_EMAIL"), os.environ.get("ADMIN_PASSWORD")
+    if not email or not pw:
+        return
+    con = dbm.connect()
+    if not con.execute("SELECT 1 FROM users WHERE role='admin'").fetchone():
+        con.execute("""INSERT INTO users (user_code, full_name, email, password_hash, role, created_at)
+                       VALUES (?,?,?,?,?,?)""", ("NS-AD-0001", os.environ.get("ADMIN_NAME", "Administrator"), email,
+                                                generate_password_hash(pw), "admin", dbm.now()))
+        con.commit()
+    con.close()
+
+
+bootstrap_admin()
 app.teardown_appcontext(dbm.close_db)
 
 
@@ -191,18 +217,18 @@ def logout():
 def dashboard():
     db = dbm.get_db()
     f, prm = scope()
-    q = lambda s: db.execute(s.replace("WHERE 1", "WHERE 1" + f), prm).fetchone()[0]
+    q = lambda s, *extra: db.execute(s.replace("WHERE 1=1", "WHERE 1=1" + f), prm + list(extra)).fetchone()[0]
     stats = {
-        "analyses": q("SELECT COUNT(*) FROM analyses a WHERE 1"),
+        "analyses": q("SELECT COUNT(*) FROM analyses a WHERE 1=1"),
         "patients": db.execute("SELECT COUNT(*) FROM patients").fetchone()[0],
-        "abnormal": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND abnormal=1"),
-        "pending": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND reviewed_by IS NULL"),
-        "today": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND date(created_at)=date('now','localtime')"),
-        "avg_conf": q("SELECT COALESCE(AVG(confidence),0) FROM analyses a WHERE 1"),
+        "abnormal": q("SELECT COUNT(*) FROM analyses a WHERE 1=1 AND abnormal=1"),
+        "pending": q("SELECT COUNT(*) FROM analyses a WHERE 1=1 AND reviewed_by IS NULL"),
+        "today": q("SELECT COUNT(*) FROM analyses a WHERE 1=1 AND substr(created_at, 1, 10)=?", dbm.today()),
+        "avg_conf": q("SELECT COALESCE(AVG(confidence),0) FROM analyses a WHERE 1=1"),
     }
-    dist = db.execute(f"SELECT modality, label, abnormal, COUNT(*) n FROM analyses a WHERE 1{f} GROUP BY modality, label ORDER BY n DESC", prm).fetchall()
+    dist = db.execute(f"SELECT modality, label, abnormal, COUNT(*) n FROM analyses a WHERE 1=1{f} GROUP BY modality, label, abnormal ORDER BY n DESC", prm).fetchall()
     recent = db.execute(f"""SELECT a.*, p.full_name patient_name, p.patient_code FROM analyses a
-                           JOIN patients p ON p.id=a.patient_id WHERE 1{f} ORDER BY a.id DESC LIMIT 6""", prm).fetchall()
+                           JOIN patients p ON p.id=a.patient_id WHERE 1=1{f} ORDER BY a.id DESC LIMIT 6""", prm).fetchall()
     return render_template("dashboard.html", stats=stats, dist=dist, recent=recent)
 
 
@@ -231,7 +257,7 @@ def patients():
     s = request.args.get("q", "").strip()
     rows = db.execute("""SELECT p.*, COUNT(a.id) n, MAX(a.created_at) last_at,
                                 SUM(a.abnormal) n_abn FROM patients p LEFT JOIN analyses a ON a.patient_id=p.id
-                         WHERE p.full_name LIKE ? OR p.patient_code LIKE ?
+                         WHERE lower(p.full_name) LIKE lower(?) OR lower(p.patient_code) LIKE lower(?)
                          GROUP BY p.id ORDER BY p.id DESC""", (f"%{s}%", f"%{s}%")).fetchall()
     return render_template("patients.html", patients=rows, q=s)
 
@@ -243,7 +269,7 @@ def patient_detail(pid):
     if not can_see(pid):
         abort(403)
     p = db.execute("SELECT * FROM patients WHERE id=?", (pid,)).fetchone() or abort(404)
-    rows = db.execute("SELECT a.*, u.full_name user_name FROM analyses a JOIN users u ON u.id=a.user_id WHERE patient_id=? ORDER BY a.id DESC", (pid,)).fetchall()
+    rows = db.execute("SELECT a.*, u.full_name user_name FROM analyses a JOIN users u ON u.id=a.user_id WHERE a.patient_id=? ORDER BY a.id DESC", (pid,)).fetchall()
     return render_template("patient_detail.html", p=p, rows=rows)
 
 
@@ -253,7 +279,7 @@ def patient_detail(pid):
 def analyze():
     db = dbm.get_db()
     f_, prm = scope("patients")
-    pats = db.execute(f"SELECT id, patient_code, full_name, age, sex FROM patients WHERE 1{f_.replace('patients.patient_id', 'patients.id')} ORDER BY id DESC", prm).fetchall()
+    pats = db.execute(f"SELECT id, patient_code, full_name, age, sex FROM patients WHERE 1=1{f_.replace('patients.patient_id', 'patients.id')} ORDER BY id DESC", prm).fetchall()
     ctx = {"patients": pats, "sel_patient": g.user["patient_id"] if is_patient() else request.values.get("patient", type=int),
            "sel_modality": request.values.get("modality", "mri"), "available": {k: ml.available(k) for k in ml.MODALITIES}}
     if request.method == "GET":
@@ -293,7 +319,7 @@ def analyze():
         return render_template("analyze.html", **ctx), 400
 
     code = dbm.next_code(db, "analyses", "analysis_code", "AN-2026-")
-    out_dir = os.path.join(dbm.UPLOADS, code)
+    out_dir = tempfile.mkdtemp(prefix=code + "-", dir=dbm.UPLOADS)
     res = ml.run_analysis(modality, img, out_dir)
     details = {k: res[k] for k in ("description", "image_w", "image_h", "histogram", "stats")}
     details["checks"] = checks
@@ -304,7 +330,9 @@ def analyze():
         (code, pid, g.user["id"], modality, "Brain" if modality == "mri" else request.form.get("body_part") or "Bone",
          os.path.basename(f.filename), res["prediction"], res["label"], int(res["abnormal"]), res["confidence"],
          json.dumps(res["probabilities"]), json.dumps(details), res["inference_ms"], dbm.now()))
+    dbm.save_images(db, code, out_dir, IMAGE_NAMES)
     db.commit()
+    shutil.rmtree(out_dir, ignore_errors=True)
     return redirect(url_for("result", aid=cur.lastrowid))
 
 
@@ -340,12 +368,24 @@ def report(aid):
 @app.get("/media/<code>/<name>")
 @login_required
 def media(code, name):
-    if name not in {"original.png", "resized.png", "normalized.png", "enhanced.png"}:
+    if name not in IMAGE_NAMES:
         abort(404)
-    row = dbm.get_db().execute("SELECT patient_id FROM analyses WHERE analysis_code=?", (code,)).fetchone()
+    db = dbm.get_db()
+    row = db.execute("SELECT patient_id FROM analyses WHERE analysis_code=?", (code,)).fetchone()
     if row is None or not can_see(row[0]):
         abort(404)
-    return send_from_directory(os.path.join(dbm.UPLOADS, os.path.basename(code)), name)
+    data = dbm.load_image(db, code, name)
+    if data is None:
+        abort(404)
+    resp = Response(data, mimetype="image/png")
+    resp.headers["Cache-Control"] = "private, max-age=86400"
+    return resp
+
+
+@app.get("/healthz")
+def healthz():
+    dbm.get_db().execute("SELECT 1").fetchone()
+    return {"status": "ok"}
 
 
 @app.get("/history")
@@ -355,7 +395,7 @@ def history():
     s, mod, res = request.args.get("q", "").strip(), request.args.get("modality", ""), request.args.get("result", "")
     sql = """SELECT a.*, p.full_name patient_name, p.patient_code, u.full_name user_name FROM analyses a
              JOIN patients p ON p.id=a.patient_id JOIN users u ON u.id=a.user_id
-             WHERE (p.full_name LIKE ? OR p.patient_code LIKE ? OR a.analysis_code LIKE ?)"""
+             WHERE (lower(p.full_name) LIKE lower(?) OR lower(p.patient_code) LIKE lower(?) OR lower(a.analysis_code) LIKE lower(?))"""
     params = [f"%{s}%"] * 3
     f_, prm = scope()
     sql += f_; params += prm
@@ -368,7 +408,7 @@ def history():
     elif res == "pending":
         sql += " AND a.reviewed_by IS NULL"
     rows = db.execute(sql + " ORDER BY a.id DESC", params).fetchall()
-    total = db.execute(f"SELECT COUNT(*) FROM analyses a WHERE 1{f_}", prm).fetchone()[0]
+    total = db.execute(f"SELECT COUNT(*) FROM analyses a WHERE 1=1{f_}", prm).fetchone()[0]
     return render_template("history.html", rows=rows, q=s, modality=mod, res=res, total=total)
 
 
