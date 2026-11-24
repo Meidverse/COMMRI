@@ -22,8 +22,8 @@ import db as dbm
 import ml
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
-ROLES = {"admin": "Administrator", "doctor": "Doctor", "technician": "Technician"}
-ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "technician": "NS-TC-"}
+ROLES = {"admin": "Administrator", "doctor": "Doctor", "patient": "Patient"}
+ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "patient": "NS-PA-"}
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
@@ -86,6 +86,19 @@ def initials(name):
     return "".join(p[0] for p in parts[:2]).upper() or "?"
 
 
+def is_patient():
+    return g.user is not None and g.user["role"] == "patient"
+
+
+def can_see(patient_id):
+    return not is_patient() or g.user["patient_id"] == patient_id
+
+
+def scope(alias="a"):
+    """SQL filter limiting analyses to the signed-in patient (no filter for staff)."""
+    return (f" AND {alias}.patient_id=?", [g.user["patient_id"]]) if is_patient() else ("", [])
+
+
 def get_analysis(aid):
     row = dbm.get_db().execute(
         """SELECT a.*, p.full_name AS patient_name, p.patient_code, p.age, p.sex, p.referred_by,
@@ -96,6 +109,8 @@ def get_analysis(aid):
            LEFT JOIN users r ON r.id=a.reviewed_by WHERE a.id=?""", (aid,)).fetchone()
     if row is None:
         abort(404)
+    if not can_see(row["patient_id"]):
+        abort(403)
     a = dict(row)
     a["probabilities"] = json.loads(a["probabilities"])
     a["details"] = json.loads(a["details"])
@@ -127,7 +142,7 @@ def register():
     if request.method == "POST":
         role = form.get("role")
         errors = []
-        if role not in ("doctor", "technician"):
+        if role not in ("doctor", "patient"):
             errors.append("Choose a valid role.")
         if len(form.get("full_name", "").strip()) < 3:
             errors.append("Enter your full name.")
@@ -144,11 +159,19 @@ def register():
             for e in errors:
                 flash(e, "error")
         else:
+            pid = None
+            if role == "patient":  # patient portal account is linked to a patient record
+                pcode = dbm.next_code(db, "patients", "patient_code", "PT-")
+                age = form.get("department", "").strip()  # register form: "Department / Age"
+                pid = db.execute("""INSERT INTO patients (patient_code, full_name, age, sex, phone, created_at)
+                                    VALUES (?,?,?,?,?,?)""",
+                                 (pcode, form["full_name"].strip(), int(age) if age.isdigit() else None, form.get("sex"),
+                                  form.get("phone", "").strip(), dbm.now())).lastrowid
             code = dbm.next_code(db, "users", "user_code", ROLE_PREFIX[role])
-            db.execute("""INSERT INTO users (user_code, full_name, email, password_hash, role, department, license_no, phone, created_at)
-                          VALUES (?,?,?,?,?,?,?,?,?)""",
+            db.execute("""INSERT INTO users (user_code, full_name, email, password_hash, role, patient_id, department, license_no, phone, created_at)
+                          VALUES (?,?,?,?,?,?,?,?,?,?)""",
                        (code, form["full_name"].strip(), form["email"].strip(), generate_password_hash(form["password"]),
-                        role, form.get("department", "").strip(), form.get("license_no", "").strip(),
+                        role, pid, form.get("department", "").strip(), form.get("license_no", "").strip(),
                         form.get("phone", "").strip(), dbm.now()))
             db.commit()
             flash(f"Account created. Your unique user ID is {code} — use it or your email to sign in.", "success")
@@ -167,26 +190,25 @@ def logout():
 @login_required
 def dashboard():
     db = dbm.get_db()
-    q = lambda s, *p: db.execute(s, p).fetchone()[0]
+    f, prm = scope()
+    q = lambda s: db.execute(s.replace("WHERE 1", "WHERE 1" + f), prm).fetchone()[0]
     stats = {
-        "analyses": q("SELECT COUNT(*) FROM analyses"),
-        "patients": q("SELECT COUNT(*) FROM patients"),
-        "abnormal": q("SELECT COUNT(*) FROM analyses WHERE abnormal=1"),
-        "pending": q("SELECT COUNT(*) FROM analyses WHERE reviewed_by IS NULL"),
-        "today": q("SELECT COUNT(*) FROM analyses WHERE date(created_at)=date('now','localtime')"),
-        "avg_conf": q("SELECT COALESCE(AVG(confidence),0) FROM analyses"),
-        "avg_ms": q("SELECT COALESCE(AVG(inference_ms),0) FROM analyses"),
+        "analyses": q("SELECT COUNT(*) FROM analyses a WHERE 1"),
+        "patients": db.execute("SELECT COUNT(*) FROM patients").fetchone()[0],
+        "abnormal": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND abnormal=1"),
+        "pending": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND reviewed_by IS NULL"),
+        "today": q("SELECT COUNT(*) FROM analyses a WHERE 1 AND date(created_at)=date('now','localtime')"),
+        "avg_conf": q("SELECT COALESCE(AVG(confidence),0) FROM analyses a WHERE 1"),
     }
-    dist = db.execute("SELECT modality, label, abnormal, COUNT(*) n FROM analyses GROUP BY modality, label ORDER BY n DESC").fetchall()
-    recent = db.execute("""SELECT a.*, p.full_name patient_name, p.patient_code FROM analyses a
-                           JOIN patients p ON p.id=a.patient_id ORDER BY a.id DESC LIMIT 6""").fetchall()
-    models = {k: {"cfg": v, "ok": ml.available(k), "m": ml.metrics(k)} for k, v in ml.MODALITIES.items()}
-    return render_template("dashboard.html", stats=stats, dist=dist, recent=recent, models=models)
+    dist = db.execute(f"SELECT modality, label, abnormal, COUNT(*) n FROM analyses a WHERE 1{f} GROUP BY modality, label ORDER BY n DESC", prm).fetchall()
+    recent = db.execute(f"""SELECT a.*, p.full_name patient_name, p.patient_code FROM analyses a
+                           JOIN patients p ON p.id=a.patient_id WHERE 1{f} ORDER BY a.id DESC LIMIT 6""", prm).fetchall()
+    return render_template("dashboard.html", stats=stats, dist=dist, recent=recent)
 
 
 # ------------------------------------------------------------------ patients
 @app.route("/patients", methods=["GET", "POST"])
-@login_required
+@roles_required("doctor", "admin")
 def patients():
     db = dbm.get_db()
     if request.method == "POST":
@@ -218,6 +240,8 @@ def patients():
 @login_required
 def patient_detail(pid):
     db = dbm.get_db()
+    if not can_see(pid):
+        abort(403)
     p = db.execute("SELECT * FROM patients WHERE id=?", (pid,)).fetchone() or abort(404)
     rows = db.execute("SELECT a.*, u.full_name user_name FROM analyses a JOIN users u ON u.id=a.user_id WHERE patient_id=? ORDER BY a.id DESC", (pid,)).fetchall()
     return render_template("patient_detail.html", p=p, rows=rows)
@@ -228,14 +252,15 @@ def patient_detail(pid):
 @login_required
 def analyze():
     db = dbm.get_db()
-    pats = db.execute("SELECT id, patient_code, full_name, age, sex FROM patients ORDER BY id DESC").fetchall()
-    ctx = {"patients": pats, "sel_patient": request.values.get("patient", type=int),
+    f_, prm = scope("patients")
+    pats = db.execute(f"SELECT id, patient_code, full_name, age, sex FROM patients WHERE 1{f_.replace('patients.patient_id', 'patients.id')} ORDER BY id DESC", prm).fetchall()
+    ctx = {"patients": pats, "sel_patient": g.user["patient_id"] if is_patient() else request.values.get("patient", type=int),
            "sel_modality": request.values.get("modality", "mri"), "available": {k: ml.available(k) for k in ml.MODALITIES}}
     if request.method == "GET":
         return render_template("analyze.html", **ctx)
 
     modality = request.form.get("modality")
-    pid = request.form.get("patient", type=int)
+    pid = g.user["patient_id"] if is_patient() else request.form.get("patient", type=int)
     f = request.files.get("image")
     err = None
     if modality not in ml.MODALITIES or not ml.available(modality):
@@ -253,10 +278,16 @@ def analyze():
         except (UnidentifiedImageError, OSError):
             err = "The file could not be read as an image."
     if err is None:
-        ok, checks = ml.validate(img)
+        ok, checks = ml.validate(img, modality)
         if not ok:
             failed = next(c for c in checks if not c[1])
-            err = f"Input validation failed: {failed[0]} ({failed[2]})."
+            name = ml.MODALITIES[modality]["name"]
+            if failed[0].startswith("Recognised"):
+                err = f"This image does not look like a {name} scan, so it was not analysed. Upload a {name} image or choose the correct modality."
+            elif failed[0].startswith("Greyscale"):
+                err = f"This looks like a colour photograph, not a medical scan ({failed[2]}). Upload a {name} image."
+            else:
+                err = f"Input validation failed: {failed[0]} ({failed[2]})."
     if err:
         flash(err, "error")
         return render_template("analyze.html", **ctx), 400
@@ -309,7 +340,10 @@ def report(aid):
 @app.get("/media/<code>/<name>")
 @login_required
 def media(code, name):
-    if name not in {"original.png", "resized.png", "normalized.png", "enhanced.png", "heatmap.png", "overlay.png"}:
+    if name not in {"original.png", "resized.png", "normalized.png", "enhanced.png"}:
+        abort(404)
+    row = dbm.get_db().execute("SELECT patient_id FROM analyses WHERE analysis_code=?", (code,)).fetchone()
+    if row is None or not can_see(row[0]):
         abort(404)
     return send_from_directory(os.path.join(dbm.UPLOADS, os.path.basename(code)), name)
 
@@ -323,6 +357,8 @@ def history():
              JOIN patients p ON p.id=a.patient_id JOIN users u ON u.id=a.user_id
              WHERE (p.full_name LIKE ? OR p.patient_code LIKE ? OR a.analysis_code LIKE ?)"""
     params = [f"%{s}%"] * 3
+    f_, prm = scope()
+    sql += f_; params += prm
     if mod in ml.MODALITIES:
         sql += " AND a.modality=?"; params.append(mod)
     if res == "abnormal":
@@ -332,7 +368,7 @@ def history():
     elif res == "pending":
         sql += " AND a.reviewed_by IS NULL"
     rows = db.execute(sql + " ORDER BY a.id DESC", params).fetchall()
-    total = db.execute("SELECT COUNT(*) FROM analyses").fetchone()[0]
+    total = db.execute(f"SELECT COUNT(*) FROM analyses a WHERE 1{f_}", prm).fetchone()[0]
     return render_template("history.html", rows=rows, q=s, modality=mod, res=res, total=total)
 
 
@@ -350,7 +386,7 @@ def staff():
                 db.commit()
             return redirect(url_for("staff"))
         role = f.get("role")
-        if role not in ROLES or "@" not in f.get("email", "") or len(f.get("password", "")) < 8 or len(f.get("full_name", "").strip()) < 3:
+        if role not in ("doctor", "admin") or "@" not in f.get("email", "") or len(f.get("password", "")) < 8 or len(f.get("full_name", "").strip()) < 3:
             flash("Fill name, valid email, role and a password of 8+ characters.", "error")
         elif db.execute("SELECT 1 FROM users WHERE lower(email)=lower(?)", (f["email"].strip(),)).fetchone():
             flash("Email already registered.", "error")
@@ -366,13 +402,6 @@ def staff():
     rows = db.execute("""SELECT u.*, COUNT(a.id) n FROM users u LEFT JOIN analyses a ON a.user_id=u.id
                          GROUP BY u.id ORDER BY CASE u.role WHEN 'admin' THEN 0 WHEN 'doctor' THEN 1 ELSE 2 END, u.id""").fetchall()
     return render_template("staff.html", rows=rows)
-
-
-@app.get("/models")
-@login_required
-def models_page():
-    data = {k: {"cfg": v, "ok": ml.available(k), "m": ml.metrics(k)} for k, v in ml.MODALITIES.items()}
-    return render_template("models.html", data=data)
 
 
 @app.errorhandler(403)

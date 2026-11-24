@@ -2,19 +2,19 @@
 {% block title %}Register{% endblock %}
 {% block form %}
 <div class="label">New account</div>
-<h2>Register as clinical staff</h2>
+<h2>Create your account</h2>
 <p>You'll receive a unique user ID that is attached to every analysis you perform.</p>
 <form method="post" class="form-grid">
   <div class="field full"><span>Role</span>
     <div class="role-pick">
       <label><input type="radio" name="role" value="doctor" {{ 'checked' if form.get('role','doctor') == 'doctor' }}><b>Doctor</b><span>Analyse, review &amp; sign reports</span></label>
-      <label><input type="radio" name="role" value="technician" {{ 'checked' if form.get('role') == 'technician' }}><b>Technician</b><span>Register patients &amp; upload scans</span></label>
+      <label><input type="radio" name="role" value="patient" {{ 'checked' if form.get('role') == 'patient' }}><b>Patient</b><span>Upload scans &amp; view your reports</span></label>
     </div>
   </div>
   <label class="field full"><span>Full name</span><input class="input" name="full_name" value="{{ form.get('full_name','') }}" required placeholder="Dr. Ananya Sharma"></label>
   <label class="field full"><span>Email</span><input class="input" type="email" name="email" value="{{ form.get('email','') }}" required placeholder="name@hospital.org"></label>
-  <label class="field"><span>Department</span><input class="input" name="department" value="{{ form.get('department','') }}" placeholder="Radiology"></label>
-  <label class="field"><span>Registration / Staff no.</span><input class="input" name="license_no" value="{{ form.get('license_no','') }}" placeholder="MCI-123456"></label>
+  <label class="field"><span>Department / Age</span><input class="input" name="department" value="{{ form.get('department','') }}" placeholder="Radiology (doctor) or age"></label>
+  <label class="field"><span>Phone</span><input class="input" name="phone" value="{{ form.get('phone','') }}" placeholder="+91 …"></label>
   <label class="field"><span>Password</span><input class="input" type="password" name="password" required minlength="8" placeholder="Min. 8 characters"></label>
   <label class="field"><span>Confirm password</span><input class="input" type="password" name="confirm" required minlength="8" placeholder="Repeat password"></label>
   <button class="btn primary block full" style="height:46px;margin-top:4px">Create account {{ icon('arrow') }}</button>

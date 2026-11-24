@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Doctor Management{% endblock %}
-{% block sub %}Administrator view of doctors, technicians and their access.{% endblock %}
+{% block sub %}Administrator view of doctors, patients and their access.{% endblock %}
 {% block content %}
 <div class="grid g-main">
   <div class="card table-wrap">
@@ -25,7 +25,7 @@
     <form class="card-b form-grid" method="post">
       <label class="field full"><span>Full name</span><input class="input" name="full_name" required></label>
       <label class="field full"><span>Email</span><input class="input" type="email" name="email" required></label>
-      <label class="field"><span>Role</span><select name="role"><option value="doctor">Doctor</option><option value="technician">Technician</option><option value="admin">Administrator</option></select></label>
+      <label class="field"><span>Role</span><select name="role"><option value="doctor">Doctor</option><option value="admin">Administrator</option></select></label>
       <label class="field"><span>Department</span><input class="input" name="department"></label>
       <label class="field full"><span>Temporary password</span><input class="input" type="password" name="password" minlength="8" required></label>
       <button class="btn primary full">Create account</button>

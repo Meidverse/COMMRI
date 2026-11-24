@@ -13,23 +13,18 @@
     <div class="viewer" id="viewer" style="--blend:.7">
       <div class="stage">
         <img src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt="Input scan">
-        <img class="ovl" src="{{ url_for('media', code=a.analysis_code, name='overlay.png') }}" alt="Grad-CAM overlay">
         <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
         <div class="scan-line"></div>
         <div class="meta tl"><b>{{ a.patient_name|upper }}</b><br>{{ a.patient_code }} · {{ a.age or '—' }}{{ (a.sex or '')[:1] }}<br>{{ m[a.modality].name|upper }}{% if a.modality == 'xray' %} · {{ a.body_part|upper }}{% endif %}</div>
         <div class="meta tr">{{ a.details.image_w }}×{{ a.details.image_h }} PX<br>INPUT 224×224<br>{{ a.inference_ms }} MS</div>
         <div class="meta bl">{{ a.analysis_code }}<br>{{ a.created_at }}</div>
-        <div class="meta br">GRAD-CAM<br>{{ m[a.modality].arch.split(' — ')[0].split(' (')[0]|upper }}</div>
-      </div>
-      <div class="viewer-bar">
-        <span>SCAN</span><input type="range" id="blend" min="0" max="100" value="70"><span>HEAT-MAP <b id="blendVal" style="color:#e8f1f8">70%</b></span>
-        <span class="legend"></span><span>LOW → HIGH</span>
+        <div class="meta br">AI MODEL<br>{{ m[a.modality].arch.split(' — ')[0].split(' (')[0]|upper }}</div>
       </div>
     </div>
     <div class="card">
-      <div class="card-h"><h3>Visual explanation</h3><span class="label">Grad-CAM · last convolutional block</span></div>
+      <div class="card-h"><h3>Image processing</h3><a class="btn sm ghost" href="{{ url_for('processing', aid=a.id) }}">Details</a></div>
       <div class="card-b frames" style="grid-template-columns:repeat(3,1fr)">
-        {% for n, t, s in [('original.png','Input image','As uploaded'), ('heatmap.png','Attention map','Gradient-weighted activations'), ('overlay.png','Overlay','Regions driving the prediction')] %}
+        {% for n, t, s in [('original.png','Input image','As uploaded'), ('resized.png','Resized','224 × 224 px'), ('enhanced.png','Enhanced','Contrast adjusted')] %}
         <figure class="frame"><div class="img"><img src="{{ url_for('media', code=a.analysis_code, name=n) }}" alt=""></div><figcaption><b>{{ t }}</b><span>{{ s }}</span></figcaption></figure>
         {% endfor %}
       </div>
@@ -78,7 +73,7 @@
           <button class="btn primary">{{ icon('check') }} Save review</button>
         </form>
         {% else %}
-        <p style="margin:0">{{ a.remarks or 'Awaiting doctor review. Technicians cannot sign off analyses.' }}</p>
+        <p style="margin:0">{{ a.remarks or 'Awaiting doctor review.' }}</p>
         {% endif %}
       </div>
     </div>

@@ -15,13 +15,12 @@
 
 <div class="card">
   <div class="card-h"><h3>Processing stages</h3><span class="label">{{ a.analysis_code }}</span></div>
-  <div class="card-b frames">
+  <div class="card-b frames" style="grid-template-columns:repeat(4,1fr)">
     {% for n, t, s, b in [
       ('original.png', 'Original image', a.details.image_w ~ '×' ~ a.details.image_h ~ ' px · as uploaded', 'INPUT'),
       ('resized.png', 'Resized', size ~ '×' ~ size ~ ' px · bilinear', '224²'),
       ('normalized.png', 'Normalised tensor', 'range ' ~ '%.2f'|format(a.details.stats.norm_min) ~ ' to ' ~ '%.2f'|format(a.details.stats.norm_max) ~ ' (shown min–max scaled)', 'μ/σ'),
-      ('enhanced.png', 'Contrast enhanced', 'CLAHE · viewing aid only, not fed to model', 'CLAHE'),
-      ('heatmap.png', 'Model attention', 'Grad-CAM after inference', 'CAM')] %}
+      ('enhanced.png', 'Enhancement', 'Contrast adjustment for better visibility', 'ENH')] %}
     <figure class="frame"><div class="img"><img src="{{ url_for('media', code=a.analysis_code, name=n) }}" alt=""><span class="badge">{{ b }}</span></div><figcaption><b>{{ loop.index }}. {{ t }}</b><span>{{ s }}</span></figcaption></figure>
     {% endfor %}
   </div>
@@ -59,7 +58,7 @@
         <dt>Pixel scaling</dt><dd class="mono">÷ 255 → [0, 1]</dd>
         <dt>Mean (R,G,B)</dt><dd class="mono">0.485, 0.456, 0.406</dd>
         <dt>Std (R,G,B)</dt><dd class="mono">0.229, 0.224, 0.225</dd>
-        <dt>Libraries</dt><dd class="mono">Pillow · NumPy · OpenCV · PyTorch</dd>
+        <dt>Libraries</dt><dd class="mono">Python · NumPy · OpenCV</dd>
       </dl>
     </div>
   </div>

@@ -52,7 +52,7 @@
     <div class="card">
       <div class="card-h"><h3>What happens next</h3></div>
       <div class="card-b">
-        {% for t, d in [('Validate', 'File type, resolution and greyscale check'), ('Preprocess', 'RGB conversion · resize 224×224 · normalisation'), ('Analyse', 'CNN inference and class probabilities'), ('Explain', 'Grad-CAM heat-map of decisive regions'), ('Record', 'Saved to patient history and report')] %}
+        {% for t, d in [('Validate', 'File type, resolution and greyscale check'), ('Preprocess', 'RGB conversion · resize 224×224 · normalisation'), ('Analyse', 'CNN inference and class probabilities'), ('Record', 'Saved to patient history and report')] %}
         <div class="check"><div class="ic"><span class="mono" style="font-size:11px">{{ loop.index }}</span></div><b>{{ t }}</b><span style="font-family:var(--body);font-size:12.5px">{{ d }}</span></div>
         {% endfor %}
       </div>
@@ -60,5 +60,5 @@
     <div class="disclaimer">{{ icon('alert') }}<div>Results are decision-support only and are not a medical diagnosis. Every AI finding must be reviewed by a qualified doctor before clinical use.</div></div>
   </div>
 </form>
-<div class="busy" id="busy"><div class="box"><div class="scanner"></div><h3>Analysing scan…</h3><p class="muted">Preprocessing · running CNN · computing Grad-CAM</p></div></div>
+<div class="busy" id="busy"><div class="box"><div class="scanner"></div><h3>Analysing scan…</h3><p class="muted">Preprocessing · running AI model · generating result</p></div></div>
 {% endblock %}

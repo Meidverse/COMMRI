@@ -35,7 +35,7 @@ STAFF = [
     ("NS-AD-0001", "Vishal Kumar Upadhyay", "admin@neuroscan.local", "Admin@2026", "admin", "IT & Systems", ""),
     ("NS-DR-0001", "Dr. Ananya Mehta", "dr.mehta@neuroscan.local", "Doctor@2026", "doctor", "Radiology", "MCI-58213"),
     ("NS-DR-0002", "Dr. Rohan Kapoor", "dr.kapoor@neuroscan.local", "Doctor@2026", "doctor", "Orthopaedics", "MCI-60477"),
-    ("NS-TC-0001", "Priya Rao", "tech.rao@neuroscan.local", "Tech@2026", "technician", "Imaging Lab", "TEC-1142"),
+    ("NS-PA-0001", "Sunita Verma", "sunita.verma@neuroscan.local", "Patient@2026", "patient", "", ""),
 ]
 PATIENTS = [
     ("Rajesh Kumar", 54, "Male", "B+", "Dr. Ananya Mehta", "Persistent headaches for 3 months, blurred vision."),
@@ -67,20 +67,20 @@ REMARKS = {
 
 client = webapp.app.test_client()
 con = dbm.connect()
-for code, name, email, pw, role, dept, lic in STAFF:
-    con.execute("INSERT INTO users (user_code, full_name, email, password_hash, role, department, license_no, created_at) VALUES (?,?,?,?,?,?,?,?)",
-                (code, name, email, generate_password_hash(pw), role, dept, lic, dbm.now()))
 for i, (name, age, sex, bg, ref, hist) in enumerate(PATIENTS, 1):
     con.execute("INSERT INTO patients (patient_code, full_name, age, sex, phone, blood_group, referred_by, history, created_by, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (f"PT-{i:04d}", name, age, sex, f"+91 98{i:03d} 4{i:02d}17", bg, ref, hist, 4, dbm.now()))
+                (f"PT-{i:04d}", name, age, sex, f"+91 98{i:03d} 4{i:02d}17", bg, ref, hist, None, dbm.now()))
+for code, name, email, pw, role, dept, lic in STAFF:
+    con.execute("INSERT INTO users (user_code, full_name, email, password_hash, role, patient_id, department, license_no, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (code, name, email, generate_password_hash(pw), role, 2 if role == "patient" else None, dept, lic, dbm.now()))
 con.commit()
 
 xray_jobs = []
 if ml.available("xray"):
     for pi, cls, k, part in XRAY_JOBS:
         files = sorted(glob.glob(os.path.join(XRAY_DIR, cls, "*")))
-        xray_jobs.append((pi, "xray", files[k * 7 % len(files)], 2 if pi != 2 else 3, part))
-jobs = [(p, m, f, u, None) for p, m, f, u in JOBS]
+        xray_jobs.append((pi, "xray", files[k * 7 % len(files)], 2, part))
+jobs = [(p, m, f, 3 if p == 1 else 1, None) for p, m, f, u in JOBS]  # patient account uploads own scans
 order = []
 for i in range(max(len(jobs), len(xray_jobs))):
     if i < len(jobs): order.append(jobs[i])
@@ -93,9 +93,14 @@ def login(idx):
 
 for n, (pi, mod, path, uidx, part) in enumerate(order, 1):
     login(uidx)
-    with open(path, "rb") as fh:
-        r = client.post("/analyze", data={"patient": str(pi + 1), "modality": mod, "body_part": part or "",
-                                          "image": (fh, os.path.basename(path))}, content_type="multipart/form-data")
+    cands = [path] + sorted(glob.glob(os.path.join(os.path.dirname(path), "*")))
+    for path in cands:  # skip images the input validation rejects
+        with open(path, "rb") as fh:
+            r = client.post("/analyze", data={"patient": str(pi + 1), "modality": mod, "body_part": part or "",
+                                              "image": (fh, os.path.basename(path))}, content_type="multipart/form-data")
+        if r.status_code != 400:
+            break
+        print("  validation rejected", os.path.basename(path))
     assert r.status_code == 302, f"analysis failed for {path}: {r.status_code}"
     aid = int(r.headers["Location"].rsplit("/", 1)[1])
     print(f"AN #{aid}: {mod} {os.path.basename(path)}")

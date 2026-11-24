@@ -115,16 +115,58 @@ def metrics(modality):
 
 
 # ---------------------------------------------------------------- validation
-def validate(img: Image.Image):
+def embed(modality, tensor):
+    """Deep features from the layer before the classifier (used to check the input is a real scan)."""
+    model, _ = get_model(modality)
+    with torch.no_grad():
+        if modality == "mri":
+            f = model.features(tensor).flatten(1)
+        else:
+            f = model.avgpool(model.features(tensor)).flatten(1)
+    return f.numpy()
+
+
+def _sim(modality, x):
+    z = np.load(os.path.join(APP_DIR, "model_meta", f"{modality}_ood.npz"))
+    e = embed(modality, x)[0]
+    e = e / (np.linalg.norm(e) + 1e-8)
+    s = float((z["centroids"] @ e).max())
+    th, med = float(z["threshold"]), float(z["median"])
+    return s, th, (s - th) / (med - th)   # score: 0 at threshold, 1 at typical training image
+
+
+def domain_check(modality, img: Image.Image):
+    """Accept only if the image resembles this model's training scans and is classified as this modality."""
+    if not os.path.exists(os.path.join(APP_DIR, "model_meta", f"{modality}_ood.npz")):
+        return True, None, None
+    x = preprocess(img)[0]
+    s, th, z = _sim(modality, x)
+    ok = z >= 0
+    clf = os.path.join(APP_DIR, "model_meta", "modality_clf.npz")
+    if ok and available("xray") and os.path.exists(clf):
+        c = np.load(clf)
+        e = embed("xray", x)[0]
+        e = e / (np.linalg.norm(e) + 1e-8)
+        p_mri = 1 / (1 + np.exp(-(float(e @ c["coef"]) + float(c["intercept"]))))
+        ok = p_mri >= 0.5 if modality == "mri" else p_mri < 0.5
+    return bool(ok), s, th
+
+
+def validate(img: Image.Image, modality=None):
     """Return (ok, checks). Checks are shown on the processing page."""
     w, h = img.size
-    rgb = np.asarray(img.convert("RGB")).astype(np.float32)
-    sat = float(np.mean(rgb.max(2) - rgb.min(2)) / 255.0)
+    rgb = np.asarray(img.convert("RGB").resize((256, 256))).astype(np.float32)
+    chroma = rgb.max(2) - rgb.min(2)
+    colourful = float(np.mean(chroma > 30))          # share of clearly coloured pixels
     checks = [
         ("Readable image file", True, f"{img.format or 'image'} · mode {img.mode}"),
         ("Minimum resolution 64 × 64", min(w, h) >= 64, f"{w} × {h} px"),
-        ("Greyscale-dominant (medical scan)", sat < 0.12, f"mean colour saturation {sat:.3f}"),
+        ("Greyscale medical image", colourful < 0.03, f"{colourful * 100:.1f}% coloured pixels"),
     ]
+    if modality and all(c[1] for c in checks):
+        ok, sim, th = domain_check(modality, img)
+        if sim is not None:
+            checks.append((f"Recognised as {MODALITIES[modality]['name']} scan", ok, f"similarity {sim:.2f} (min {th:.2f})"))
     return all(c[1] for c in checks), checks
 
 
@@ -188,12 +230,10 @@ def run_analysis(modality, img: Image.Image, out_dir):
     Image.fromarray(clahe).save(os.path.join(out_dir, "enhanced.png"))
     hist = np.histogram(gray, bins=32, range=(0, 255))[0]
 
-    probs, idx, cam = gradcam(modality, tensor)
-    c, heat = _heat(cam, display.size)
-    Image.fromarray(heat).save(os.path.join(out_dir, "heatmap.png"))
-    base = np.asarray(display).astype(np.float32)
-    alpha = (0.6 * c)[..., None]
-    Image.fromarray((base * (1 - alpha) + heat * alpha).astype(np.uint8)).save(os.path.join(out_dir, "overlay.png"))
+    model, _ = get_model(modality)
+    with torch.no_grad():
+        probs = torch.softmax(model(tensor), 1)[0].numpy()
+    idx = int(probs.argmax())
     ms = (time.perf_counter() - t0) * 1000
 
     key = cfg["classes"][idx]

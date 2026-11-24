@@ -15,11 +15,15 @@
       <div class="nav-sec">Workspace</div>
       <a href="{{ url_for('dashboard') }}" class="{{ 'on' if nav == 'dashboard' }}">{{ icon('grid') }} Dashboard</a>
       <a href="{{ url_for('analyze') }}" class="{{ 'on' if nav in ('analyze','result','processing','report') }}">{{ icon('scan') }} Image Analysis</a>
+      {% if g.user.role == 'patient' %}
+      <a href="{{ url_for('patient_detail', pid=g.user.patient_id) }}" class="{{ 'on' if nav == 'patient_detail' }}">{{ icon('user') }} My Records</a>
+      <a href="{{ url_for('history') }}" class="{{ 'on' if nav == 'history' }}">{{ icon('clock') }} My Reports</a>
+      {% else %}
       <a href="{{ url_for('patients') }}" class="{{ 'on' if nav in ('patients','patient_detail') }}">{{ icon('users') }} Patients</a>
       <a href="{{ url_for('history') }}" class="{{ 'on' if nav == 'history' }}">{{ icon('clock') }} Analysis History</a>
-      <div class="nav-sec">System</div>
-      <a href="{{ url_for('models_page') }}" class="{{ 'on' if nav == 'models_page' }}">{{ icon('cpu') }} AI Models</a>
-      {% if g.user.role == 'admin' %}<a href="{{ url_for('staff') }}" class="{{ 'on' if nav == 'staff' }}">{{ icon('shield') }} Doctor Management</a>{% endif %}
+      {% endif %}
+      {% if g.user.role == 'admin' %}<div class="nav-sec">Administration</div>
+      <a href="{{ url_for('staff') }}" class="{{ 'on' if nav == 'staff' }}">{{ icon('shield') }} Doctor Management</a>{% endif %}
     </nav>
     <div class="side-foot">
       <div class="me">

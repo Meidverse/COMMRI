@@ -2,13 +2,13 @@
 {% block title %}Dashboard{% endblock %}
 {% block heading %}Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ g.user.full_name.split()[0] if not g.user.full_name.startswith('Dr') else g.user.full_name.split()[:2]|join(' ') }}{% endblock %}
 {% block sub %}Overview of imaging analyses, findings and model status.{% endblock %}
-{% block actions %}<a class="btn" href="{{ url_for('patients') }}">{{ icon('user') }} Add patient</a><a class="btn teal" href="{{ url_for('analyze') }}">{{ icon('upload') }} Upload scan</a>{% endblock %}
+{% block actions %}{% if g.user.role != 'patient' %}<a class="btn" href="{{ url_for('patients') }}">{{ icon('user') }} Add patient</a>{% endif %}<a class="btn teal" href="{{ url_for('analyze') }}">{{ icon('upload') }} Upload scan</a>{% endblock %}
 {% block content %}
 <div class="grid g4 stagger">
   <div class="card stat hl"><div class="label">Total analyses</div><div class="num">{{ stats.analyses }}</div><div class="foot">{{ stats.today }} performed today</div><div class="spark">{{ icon('activity') }}</div></div>
   <div class="card stat"><div class="label">Registered patients</div><div class="num">{{ stats.patients }}</div><div class="foot">Linked to every scan</div><div class="spark">{{ icon('users') }}</div></div>
   <div class="card stat"><div class="label">Abnormal findings</div><div class="num" style="color:var(--coral)">{{ stats.abnormal }}<small> / {{ stats.analyses }}</small></div><div class="foot">Tumour or fracture detected</div><div class="spark">{{ icon('alert') }}</div></div>
-  <div class="card stat"><div class="label">Awaiting doctor review</div><div class="num" style="color:var(--amber)">{{ stats.pending }}</div><div class="foot">Avg. confidence {{ stats.avg_conf|pct }} · {{ '%.0f'|format(stats.avg_ms) }} ms</div><div class="spark">{{ icon('eye') }}</div></div>
+  <div class="card stat"><div class="label">Awaiting doctor review</div><div class="num" style="color:var(--amber)">{{ stats.pending }}</div><div class="foot">Avg. confidence {{ stats.avg_conf|pct }}</div><div class="spark">{{ icon('eye') }}</div></div>
 </div>
 
 <div class="grid g-main">
@@ -46,18 +46,6 @@
           <div class="track"><div class="fill" style="--w:{{ (d.n / mx * 100)|round(1) }}%"></div></div><span class="v">{{ d.n }}</span>
         </div>
         {% else %}<p class="muted" style="margin:0">No data yet.</p>{% endfor %}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-h"><h3>AI model status</h3><a class="btn sm ghost" href="{{ url_for('models_page') }}">Details</a></div>
-      <div class="card-b grid" style="gap:12px">
-        {% for k, d in models.items() %}
-        <div style="display:flex;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2)">
-          <div class="spark" style="position:static;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#fff;border:1px solid var(--line)">{{ icon('brain' if k == 'mri' else 'bone') }}</div>
-          <div style="flex:1"><b style="font-family:var(--display)">{{ d.cfg.task }}</b><div class="mono muted">{{ d.cfg.arch.split(' — ')[0].split(' (')[0] }}{% if d.m %} · acc {{ d.m.test.accuracy|pct }}{% endif %}</div></div>
-          <span class="chip {{ 'ok' if d.ok else 'warn' }}">{{ 'Online' if d.ok else 'Not loaded' }}</span>
-        </div>
-        {% endfor %}
       </div>
     </div>
   </div>

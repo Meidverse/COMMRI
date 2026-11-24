@@ -34,7 +34,7 @@
     <h4>Images</h4>
     <div class="rp-imgs">
       <figure><img src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt=""><figcaption>Fig. A — Submitted image ({{ a.details.image_w }}×{{ a.details.image_h }} px)</figcaption></figure>
-      <figure><img src="{{ url_for('media', code=a.analysis_code, name='overlay.png') }}" alt=""><figcaption>Fig. B — Grad-CAM overlay: regions influencing the prediction</figcaption></figure>
+      <figure><img src="{{ url_for('media', code=a.analysis_code, name='enhanced.png') }}" alt=""><figcaption>Fig. B — Preprocessed (contrast-enhanced) image</figcaption></figure>
     </div>
   </section>
 
@@ -50,7 +50,6 @@
       <dl class="kv" style="font-size:13px">
         <dt>Model</dt><dd>{{ MODALITIES[a.modality].arch.split(' — ')[0].split(' (')[0] }}</dd>
         <dt>Input</dt><dd class="mono">224×224 RGB, normalised</dd>
-        <dt>Explanation</dt><dd>Grad-CAM</dd>
         <dt>Processing time</dt><dd class="mono">{{ a.inference_ms }} ms</dd>
       </dl>
     </div>
