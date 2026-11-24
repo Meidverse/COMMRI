@@ -16,7 +16,7 @@ python app\app.py      # then open http://127.0.0.1:5000
 | Administrator | admin@neuroscan.local / NS-AD-0001 | Admin@2026 |
 | Doctor | dr.mehta@neuroscan.local / NS-DR-0001 | Doctor@2026 |
 | Doctor | dr.kapoor@neuroscan.local / NS-DR-0002 | Doctor@2026 |
-| Technician | tech.rao@neuroscan.local / NS-TC-0001 | Tech@2026 |
+| Patient (portal) | sunita.verma@neuroscan.local / NS-PA-0001 | Patient@2026 |
 
 Demo patients are fictional. Every demo analysis is real model output (images uploaded through the app).
 

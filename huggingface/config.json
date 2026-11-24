@@ -1,0 +1,57 @@
+{
+  "tumor_model": {
+    "name": "kaggle_tumor_2dcnn_best",
+    "task": "image-classification",
+    "architecture": "2D-CNN",
+    "num_classes": 4,
+    "classes": ["glioma", "meningioma", "notumor", "pituitary"],
+    "input_size": [224, 224],
+    "channels": 3,
+    "parameters": 4853956,
+    "metrics": {
+      "accuracy": 0.9395,
+      "precision": 0.94,
+      "recall": 0.94,
+      "f1_score": 0.94
+    },
+    "per_class_accuracy": {
+      "glioma": 0.981,
+      "meningioma": 0.839,
+      "notumor": 0.985,
+      "pituitary": 0.943
+    },
+    "training": {
+      "dataset": "Kaggle Brain Tumor MRI",
+      "samples": 7023,
+      "epochs": 50,
+      "batch_size": 32,
+      "optimizer": "AdamW",
+      "learning_rate": 0.0001,
+      "scheduler": "OneCycleLR",
+      "gpu": "NVIDIA RTX 4090"
+    }
+  },
+  "ixi_model": {
+    "name": "ixi_3dcnn_best",
+    "task": "3d-volume-classification",
+    "architecture": "3D-CNN",
+    "num_classes": 2,
+    "classes": ["healthy", "diseased"],
+    "input_size": [64, 64, 64],
+    "channels": 1,
+    "parameters": 1196674,
+    "training": {
+      "dataset": "IXI Brain MRI",
+      "samples": 681,
+      "epochs": 30,
+      "batch_size": 2,
+      "optimizer": "Adam",
+      "learning_rate": 0.0001
+    }
+  },
+  "framework": {
+    "primary": "Mojo",
+    "inference": "PyTorch",
+    "version": "2.0+"
+  }
+}
