@@ -1,0 +1,39 @@
+{% from "_icons.html" import icon, logo %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} · NeuroScan AI</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<div class="auth">
+  <section class="auth-art">
+    <svg class="rings" viewBox="0 0 560 560" aria-hidden="true">
+      <defs><radialGradient id="rg" cx="50%" cy="50%"><stop offset="0" stop-color="#5fd6cd" stop-opacity=".35"/><stop offset="1" stop-color="#5fd6cd" stop-opacity="0"/></radialGradient></defs>
+      <circle cx="280" cy="280" r="250" fill="url(#rg)"/>
+      {% for r in [250, 214, 178, 142, 106, 70] %}<circle cx="280" cy="280" r="{{ r }}" fill="none" stroke="#5fd6cd" stroke-opacity="{{ 0.10 + loop.index0 * 0.05 }}" stroke-width="1" {% if loop.index is even %}stroke-dasharray="3 7"{% endif %}/>{% endfor %}
+      <path d="M30 280h120l22-46 34 98 30-74 18 22h276" fill="none" stroke="#5fd6cd" stroke-width="2" stroke-opacity=".7"/>
+      <circle cx="280" cy="280" r="5" fill="#5fd6cd"/>
+      <path d="M280 30v500M30 280h500" stroke="#fff" stroke-opacity=".06"/>
+    </svg>
+    <a class="brand" href="{{ url_for('login') }}">{{ logo(40) }}<div><b>NeuroScan AI</b><small>MEDICAL IMAGE ANALYSIS SYSTEM</small></div></a>
+    <h1>AI-assisted reading for <em>MRI</em> and <em>X-ray</em> imaging.</h1>
+    <p>Upload a scan, let deep-learning models classify it and highlight the regions that drove the decision — then review, report and keep a complete history for every patient.</p>
+    <div class="facts">
+      <div><b>93.9%</b><span>Brain tumour model accuracy</span></div>
+      <div><b>4 + 2</b><span>MRI and X-ray classes</span></div>
+      <div><b>&lt; 1 s</b><span>Analysis on CPU</span></div>
+    </div>
+  </section>
+  <section class="auth-form">
+    <div class="box">
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% if msgs %}<div class="grid" style="gap:10px;margin-bottom:18px">
+        {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ icon('check' if cat == 'success' else 'alert') }}<span>{{ m }}</span></div>{% endfor %}
+      </div>{% endif %}{% endwith %}
+      {% block form %}{% endblock %}
+    </div>
+  </section>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}AI Models{% endblock %}
+{% block sub %}Deep-learning models used by the analysis module, with their evaluation results.{% endblock %}
+{% block content %}
+{% for k, d in data.items() %}
+<div class="card">
+  <div class="card-h" style="padding-bottom:4px">
+    <div style="display:flex;gap:14px;align-items:center">
+      <div class="avatar" style="width:44px;height:44px;border-radius:12px">{{ icon('brain' if k == 'mri' else 'bone') }}</div>
+      <div><h3 style="font-size:19px">{{ d.cfg.task }}</h3><div class="mono muted">{{ d.cfg.arch }} · {{ d.cfg.params }} parameters · PyTorch</div></div>
+    </div>
+    <span class="chip {{ 'ok' if d.ok else 'warn' }}">{{ 'Online' if d.ok else 'Weights not found' }}</span>
+  </div>
+  {% if d.m %}{% set t = d.m.test %}
+  <div class="card-b grid" style="gap:22px">
+    <div class="grid g4">
+      {% for n, v in [('Accuracy', t.accuracy), ('Precision', t.precision_macro), ('Recall', t.recall_macro), ('F1-score', t.f1_macro)] %}
+      <div style="padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)"><div class="label">{{ n }}{{ ' (macro)' if not loop.first }}</div><div style="font-family:var(--display);font-size:30px;font-weight:600">{{ v|pct }}</div></div>
+      {% endfor %}
+    </div>
+    <div class="grid g2">
+      <div>
+        <div class="label" style="margin-bottom:8px">Per-class {{ 'recall' }}</div>
+        {% for c in d.cfg.classes %}{% set pc = t.per_class[c] %}
+        <div class="pbar top"><span class="name">{{ d.cfg.labels[c][0] }}</span><div class="track"><div class="fill" style="--w:{{ (pc.recall * 100)|round(1) }}%"></div></div><span class="v">{{ pc.recall|pct }}</span></div>
+        {% endfor %}
+      </div>
+      <div>
+        {% set cmsrc = d.m.verification if d.m.verification is defined else t %}
+        {% if cmsrc.confusion_matrix is defined %}
+        <div class="label" style="margin-bottom:8px">Confusion matrix{% if d.m.verification is defined %} (verification run, {{ d.m.verification.images }} images){% else %} (test set){% endif %}</div>
+        <table class="cm"><tr><th>actual ↓ / predicted →</th>{% for c in d.cfg.classes %}<th>{{ d.cfg.labels[c][0].split()[0] }}</th>{% endfor %}</tr>
+          {% for row in cmsrc.confusion_matrix %}<tr><th>{{ d.cfg.labels[d.cfg.classes[loop.index0]][0].split()[0] }}</th>{% set ri = loop.index0 %}{% for v in row %}<td class="{{ 'd' if loop.index0 == ri }}">{{ v }}</td>{% endfor %}</tr>{% endfor %}
+        </table>
+        {% endif %}
+      </div>
+    </div>
+    <div class="note">{{ icon('alert') }}<span>
+      {% if k == 'mri' %}Trained on the Kaggle Brain Tumor MRI dataset (7,023 images, 50 epochs, AdamW + OneCycleLR). Headline metrics recorded on the held-out test split at training time; verification run accuracy {{ d.m.verification.accuracy|pct }}.
+      {% else %}Fine-tuned on {{ d.m.dataset.train }} X-ray images, validated on {{ d.m.dataset.val }}, tested on {{ d.m.dataset.test }} unseen images. The original dataset split leaked ({{ d.m.dedup.original_test_in_train }} test files duplicated in training), so duplicates were removed ({{ d.m.dedup.original_files }} → {{ d.m.dedup.unique_files }} unique files) and a fresh stratified split was made.{% endif %}
+    </span></div>
+  </div>
+  {% else %}
+  <div class="card-b"><p class="muted" style="margin:0">No evaluation results available for this model yet.</p></div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

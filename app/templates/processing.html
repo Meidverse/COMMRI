@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Image Processing{% endblock %}
+{% block crumbs %}<a href="{{ url_for('history') }}">History</a> / <a href="{{ url_for('result', aid=a.id) }}">{{ a.analysis_code }}</a> / Processing{% endblock %}
+{% block heading %}Image processing pipeline{% endblock %}
+{% block sub %}How {{ a.original_filename }} was validated and prepared before AI analysis.{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('result', aid=a.id) }}">{{ icon('eye') }} View result</a>{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="pipe">
+    {% for t, d in [('Upload & validate', 'Format, resolution, greyscale'), ('Format conversion', 'Decode → 3-channel RGB'), ('Resize', a.details.image_w ~ '×' ~ a.details.image_h ~ ' → ' ~ size ~ '×' ~ size), ('Normalise', 'Scale to [0,1], ImageNet mean/std'), ('Model input', '1 × 3 × ' ~ size ~ ' × ' ~ size ~ ' tensor')] %}
+    <div class="st"><div class="no">STEP {{ '%02d'|format(loop.index) }}</div><h4>{{ t }}</h4><p>{{ d }}</p><div class="ok">{{ icon('check') }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-h"><h3>Processing stages</h3><span class="label">{{ a.analysis_code }}</span></div>
+  <div class="card-b frames">
+    {% for n, t, s, b in [
+      ('original.png', 'Original image', a.details.image_w ~ '×' ~ a.details.image_h ~ ' px · as uploaded', 'INPUT'),
+      ('resized.png', 'Resized', size ~ '×' ~ size ~ ' px · bilinear', '224²'),
+      ('normalized.png', 'Normalised tensor', 'range ' ~ '%.2f'|format(a.details.stats.norm_min) ~ ' to ' ~ '%.2f'|format(a.details.stats.norm_max) ~ ' (shown min–max scaled)', 'μ/σ'),
+      ('enhanced.png', 'Contrast enhanced', 'CLAHE · viewing aid only, not fed to model', 'CLAHE'),
+      ('heatmap.png', 'Model attention', 'Grad-CAM after inference', 'CAM')] %}
+    <figure class="frame"><div class="img"><img src="{{ url_for('media', code=a.analysis_code, name=n) }}" alt=""><span class="badge">{{ b }}</span></div><figcaption><b>{{ loop.index }}. {{ t }}</b><span>{{ s }}</span></figcaption></figure>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid g3">
+  <div class="card">
+    <div class="card-h"><h3>Input validation</h3><span class="chip ok">Passed</span></div>
+    <div class="card-b">
+      {% for name, ok, val in a.details.checks %}
+      <div class="check"><div class="ic {{ '' if ok else 'no' }}">{{ icon('check' if ok else 'x') }}</div><b>{{ name }}</b><span>{{ val }}</span></div>
+      {% endfor %}
+      <div class="check"><div class="ic">{{ icon('check') }}</div><b>Accepted file type</b><span>{{ a.original_filename.rsplit('.',1)[-1]|upper }}</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>Intensity histogram</h3><span class="label">Greyscale · 32 bins</span></div>
+    <div class="card-b">
+      {% set hm = a.details.histogram|max %}
+      <div class="hist">{% for v in a.details.histogram %}<i style="height:{{ (v / hm * 100)|round(1) if hm else 0 }}%"></i>{% endfor %}</div>
+      <div style="display:flex;justify-content:space-between" class="mono muted"><span>0</span><span>128</span><span>255</span></div>
+      <dl class="kv" style="margin-top:14px">
+        <dt>Mean intensity</dt><dd class="mono">{{ '%.1f'|format(a.details.stats.mean) }}</dd>
+        <dt>Std. deviation</dt><dd class="mono">{{ '%.1f'|format(a.details.stats.std) }}</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>Preprocessing parameters</h3></div>
+    <div class="card-b">
+      <dl class="kv">
+        <dt>Colour mode</dt><dd class="mono">RGB (3 channels)</dd>
+        <dt>Target size</dt><dd class="mono">{{ size }} × {{ size }}</dd>
+        <dt>Interpolation</dt><dd class="mono">Bilinear</dd>
+        <dt>Pixel scaling</dt><dd class="mono">÷ 255 → [0, 1]</dd>
+        <dt>Mean (R,G,B)</dt><dd class="mono">0.485, 0.456, 0.406</dd>
+        <dt>Std (R,G,B)</dt><dd class="mono">0.229, 0.224, 0.225</dd>
+        <dt>Libraries</dt><dd class="mono">Pillow · NumPy · OpenCV · PyTorch</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

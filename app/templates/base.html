@@ -1,0 +1,51 @@
+{% from "_icons.html" import icon, logo %}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}NeuroScan AI{% endblock %} · NeuroScan AI</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="{{ url_for('dashboard') }}">{{ logo() }}<div><b>NeuroScan AI</b><small>MEDICAL IMAGE ANALYSIS</small></div></a>
+    <nav class="nav">
+      <a class="cta" href="{{ url_for('analyze') }}">{{ icon('plus') }} New Analysis</a>
+      <div class="nav-sec">Workspace</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if nav == 'dashboard' }}">{{ icon('grid') }} Dashboard</a>
+      <a href="{{ url_for('analyze') }}" class="{{ 'on' if nav in ('analyze','result','processing','report') }}">{{ icon('scan') }} Image Analysis</a>
+      <a href="{{ url_for('patients') }}" class="{{ 'on' if nav in ('patients','patient_detail') }}">{{ icon('users') }} Patients</a>
+      <a href="{{ url_for('history') }}" class="{{ 'on' if nav == 'history' }}">{{ icon('clock') }} Analysis History</a>
+      <div class="nav-sec">System</div>
+      <a href="{{ url_for('models_page') }}" class="{{ 'on' if nav == 'models_page' }}">{{ icon('cpu') }} AI Models</a>
+      {% if g.user.role == 'admin' %}<a href="{{ url_for('staff') }}" class="{{ 'on' if nav == 'staff' }}">{{ icon('shield') }} Doctor Management</a>{% endif %}
+    </nav>
+    <div class="side-foot">
+      <div class="me">
+        <div class="avatar">{{ g.user.full_name|initials }}</div>
+        <div><b>{{ g.user.full_name }}</b><span>{{ g.user.user_code }} · {{ ROLES[g.user.role] }}</span></div>
+        <a href="{{ url_for('logout') }}" title="Sign out" style="width:30px">{{ icon('logout') }}</a>
+      </div>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <div>
+        <div class="crumbs">{% block crumbs %}NeuroScan / {{ self.title() }}{% endblock %}</div>
+        <h1>{% block heading %}{{ self.title() }}{% endblock %}</h1>
+        <div class="sub">{% block sub %}{% endblock %}</div>
+      </div>
+      <div class="top-actions">{% block actions %}{% endblock %}</div>
+    </header>
+    <div class="content">
+      {% with msgs = get_flashed_messages(with_categories=true) %}{% if msgs %}<div class="flashes grid" style="gap:10px">
+        {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ icon('check' if cat == 'success' else 'alert') }}<span>{{ m }}</span></div>{% endfor %}
+      </div>{% endif %}{% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Doctor Management{% endblock %}
+{% block sub %}Administrator view of doctors, technicians and their access.{% endblock %}
+{% block content %}
+<div class="grid g-main">
+  <div class="card table-wrap">
+    <table class="table">
+      <thead><tr><th>Staff member</th><th>User ID</th><th>Role</th><th>Department</th><th>Analyses</th><th>Last login</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for u in rows %}
+      <tr>
+        <td><div style="display:flex;gap:12px;align-items:center"><div class="avatar">{{ u.full_name|initials }}</div><div class="who"><b>{{ u.full_name }}</b><span>{{ u.email }}</span></div></div></td>
+        <td class="mono">{{ u.user_code }}</td>
+        <td><span class="chip plain {{ 'warn' if u.role == 'admin' else ('ok' if u.role == 'doctor' else '') }}">{{ ROLES[u.role] }}</span></td>
+        <td>{{ u.department or '—' }}</td><td class="mono">{{ u.n }}</td><td class="mono muted">{{ u.last_login or 'never' }}</td>
+        <td>{% if u.active %}<span class="chip ok">Active</span>{% else %}<span class="chip bad">Disabled</span>{% endif %}</td>
+        <td>{% if u.id != g.user.id %}<form method="post"><input type="hidden" name="action" value="toggle"><input type="hidden" name="uid" value="{{ u.id }}"><button class="btn sm">{{ 'Disable' if u.active else 'Enable' }}</button></form>{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card" style="align-self:start">
+    <div class="card-h"><h3>Add staff account</h3></div>
+    <form class="card-b form-grid" method="post">
+      <label class="field full"><span>Full name</span><input class="input" name="full_name" required></label>
+      <label class="field full"><span>Email</span><input class="input" type="email" name="email" required></label>
+      <label class="field"><span>Role</span><select name="role"><option value="doctor">Doctor</option><option value="technician">Technician</option><option value="admin">Administrator</option></select></label>
+      <label class="field"><span>Department</span><input class="input" name="department"></label>
+      <label class="field full"><span>Temporary password</span><input class="input" type="password" name="password" minlength="8" required></label>
+      <button class="btn primary full">Create account</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block heading %}Good {{ 'morning' if now_hour < 12 else ('afternoon' if now_hour < 17 else 'evening') }}, {{ g.user.full_name.split()[0] if not g.user.full_name.startswith('Dr') else g.user.full_name.split()[:2]|join(' ') }}{% endblock %}
+{% block sub %}Overview of imaging analyses, findings and model status.{% endblock %}
+{% block actions %}<a class="btn" href="{{ url_for('patients') }}">{{ icon('user') }} Add patient</a><a class="btn teal" href="{{ url_for('analyze') }}">{{ icon('upload') }} Upload scan</a>{% endblock %}
+{% block content %}
+<div class="grid g4 stagger">
+  <div class="card stat hl"><div class="label">Total analyses</div><div class="num">{{ stats.analyses }}</div><div class="foot">{{ stats.today }} performed today</div><div class="spark">{{ icon('activity') }}</div></div>
+  <div class="card stat"><div class="label">Registered patients</div><div class="num">{{ stats.patients }}</div><div class="foot">Linked to every scan</div><div class="spark">{{ icon('users') }}</div></div>
+  <div class="card stat"><div class="label">Abnormal findings</div><div class="num" style="color:var(--coral)">{{ stats.abnormal }}<small> / {{ stats.analyses }}</small></div><div class="foot">Tumour or fracture detected</div><div class="spark">{{ icon('alert') }}</div></div>
+  <div class="card stat"><div class="label">Awaiting doctor review</div><div class="num" style="color:var(--amber)">{{ stats.pending }}</div><div class="foot">Avg. confidence {{ stats.avg_conf|pct }} · {{ '%.0f'|format(stats.avg_ms) }} ms</div><div class="spark">{{ icon('eye') }}</div></div>
+</div>
+
+<div class="grid g-main">
+  <div class="card">
+    <div class="card-h"><h3>Recent analyses</h3><a class="btn sm ghost" href="{{ url_for('history') }}">View all {{ icon('arrow') }}</a></div>
+    <div class="card-b" style="padding:14px 0 0">
+      {% if recent %}
+      <table class="table">
+        <thead><tr><th>Scan</th><th>Patient</th><th>Modality</th><th>Finding</th><th>Confidence</th><th></th></tr></thead>
+        <tbody>
+        {% for a in recent %}
+        <tr>
+          <td><img class="thumb" src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt=""></td>
+          <td class="who"><b>{{ a.patient_name }}</b><span>{{ a.patient_code }} · {{ a.analysis_code }}</span></td>
+          <td><span class="tag">{{ MODALITIES[a.modality].name }}</span></td>
+          <td><span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ a.label }}</span></td>
+          <td class="mono">{{ a.confidence|pct }}</td>
+          <td><a class="btn sm" href="{{ url_for('result', aid=a.id) }}">Open</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<div class="empty-state"><b>No analyses yet</b>Upload the first scan to get started.</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="grid" style="align-content:start">
+    <div class="card">
+      <div class="card-h"><h3>Findings distribution</h3><span class="label">All time</span></div>
+      <div class="card-b">
+        {% set mx = (dist|map(attribute='n')|max) if dist else 1 %}
+        {% for d in dist %}
+        <div class="pbar {{ 'top bad' if d.abnormal else 'top' }}" style="grid-template-columns:1.4fr 1.4fr 30px">
+          <span class="name">{{ d.label }} <span class="muted" style="font-size:11.5px">· {{ MODALITIES[d.modality].name }}</span></span>
+          <div class="track"><div class="fill" style="--w:{{ (d.n / mx * 100)|round(1) }}%"></div></div><span class="v">{{ d.n }}</span>
+        </div>
+        {% else %}<p class="muted" style="margin:0">No data yet.</p>{% endfor %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>AI model status</h3><a class="btn sm ghost" href="{{ url_for('models_page') }}">Details</a></div>
+      <div class="card-b grid" style="gap:12px">
+        {% for k, d in models.items() %}
+        <div style="display:flex;gap:14px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--surface-2)">
+          <div class="spark" style="position:static;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:#fff;border:1px solid var(--line)">{{ icon('brain' if k == 'mri' else 'bone') }}</div>
+          <div style="flex:1"><b style="font-family:var(--display)">{{ d.cfg.task }}</b><div class="mono muted">{{ d.cfg.arch.split(' — ')[0].split(' (')[0] }}{% if d.m %} · acc {{ d.m.test.accuracy|pct }}{% endif %}</div></div>
+          <span class="chip {{ 'ok' if d.ok else 'warn' }}">{{ 'Online' if d.ok else 'Not loaded' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

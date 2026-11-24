@@ -1,0 +1,4 @@
+{% extends "base.html" if g.user else "auth_base.html" %}
+{% block title %}Error {{ code }}{% endblock %}
+{% block content %}<div class="card"><div class="empty-state"><b>{{ code }}</b>{{ msg }}<div style="margin-top:16px"><a class="btn" href="{{ url_for('dashboard') }}">Back to dashboard</a></div></div></div>{% endblock %}
+{% block form %}<h2>{{ code }}</h2><p>{{ msg }}</p><a class="btn" href="{{ url_for('login') }}">Sign in</a>{% endblock %}

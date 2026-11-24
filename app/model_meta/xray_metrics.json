@@ -1,0 +1,71 @@
+{
+  "model": "MobileNetV3-Large (ImageNet pretrained, fine-tuned)",
+  "classes": [
+    "fractured",
+    "not fractured"
+  ],
+  "dataset": {
+    "train": 3062,
+    "val": 383,
+    "test": 383
+  },
+  "dedup": {
+    "original_files": 9913,
+    "unique_files": 3828,
+    "label_conflicts_dropped": 0,
+    "original_test_in_train": 891,
+    "original_val_in_train": 1725,
+    "note": "Original Kaggle splits leaked; a fresh stratified 80/10/10 split over unique files was used."
+  },
+  "epochs": 4,
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 0.36936657852493227,
+      "val_accuracy": 0.783289817232376
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.1486269577872008,
+      "val_accuracy": 0.9556135770234987
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.1352041696663946,
+      "val_accuracy": 0.9895561357702349
+    },
+    {
+      "epoch": 4,
+      "train_loss": 0.12170762720052153,
+      "val_accuracy": 1.0
+    }
+  ],
+  "test": {
+    "accuracy": 0.9765013054830287,
+    "precision_macro": 0.9743459915611814,
+    "recall_macro": 0.9771646859083192,
+    "f1_macro": 0.975689228360451,
+    "per_class": {
+      "fractured": {
+        "precision": 0.9620253164556962,
+        "recall": 0.9806451612903225,
+        "f1": 0.9712460063897763
+      },
+      "not fractured": {
+        "precision": 0.9866666666666667,
+        "recall": 0.9736842105263158,
+        "f1": 0.9801324503311258
+      }
+    },
+    "confusion_matrix": [
+      [
+        152,
+        3
+      ],
+      [
+        6,
+        222
+      ]
+    ]
+  }
+}

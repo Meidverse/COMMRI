@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Patients{% endblock %}
+{% block sub %}Patient records linked to every uploaded scan and report.{% endblock %}
+{% block content %}
+<div class="grid g-main">
+  <div class="card table-wrap">
+    <form class="toolbar" method="get"><div class="search">{{ icon('search') }}<input class="input" name="q" value="{{ q }}" placeholder="Search by name or patient ID…"></div><button class="btn">Search</button></form>
+    <table class="table">
+      <thead><tr><th>Patient</th><th>Age / Sex</th><th>Referred by</th><th>Analyses</th><th>Last scan</th><th></th></tr></thead>
+      <tbody>
+      {% for p in patients %}
+      <tr>
+        <td><div style="display:flex;gap:12px;align-items:center"><div class="avatar" style="background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)">{{ p.full_name|initials }}</div><div class="who"><b>{{ p.full_name }}</b><span>{{ p.patient_code }}</span></div></div></td>
+        <td>{{ p.age or '—' }} · {{ p.sex or '—' }}</td>
+        <td>{{ p.referred_by or '—' }}</td>
+        <td><span class="mono">{{ p.n }}</span>{% if p.n_abn %} <span class="chip bad plain">{{ p.n_abn }} abnormal</span>{% endif %}</td>
+        <td class="mono muted">{{ p.last_at or '—' }}</td>
+        <td style="white-space:nowrap"><a class="btn sm" href="{{ url_for('patient_detail', pid=p.id) }}">Record</a> <a class="btn sm teal" href="{{ url_for('analyze', patient=p.id) }}">Scan</a></td>
+      </tr>
+      {% else %}<tr><td colspan="6"><div class="empty-state"><b>No patients yet</b>Register the first patient using the form.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="new" style="align-self:start">
+    <div class="card-h"><h3>Register new patient</h3><span class="label">Auto ID</span></div>
+    <form class="card-b form-grid" method="post">
+      <label class="field full"><span>Full name</span><input class="input" name="full_name" required placeholder="Patient name"></label>
+      <label class="field"><span>Age</span><input class="input" name="age" inputmode="numeric" placeholder="42"></label>
+      <label class="field"><span>Sex</span><select name="sex"><option>Female</option><option>Male</option><option>Other</option></select></label>
+      <label class="field"><span>Phone</span><input class="input" name="phone" placeholder="+91 …"></label>
+      <label class="field"><span>Blood group</span><select name="blood_group"><option value="">—</option>{% for b in ['A+','A-','B+','B-','AB+','AB-','O+','O-'] %}<option>{{ b }}</option>{% endfor %}</select></label>
+      <label class="field full"><span>Referred by</span><input class="input" name="referred_by" placeholder="Referring doctor / department"></label>
+      <label class="field full"><span>Clinical history</span><textarea name="history" placeholder="Symptoms, relevant history…"></textarea></label>
+      <div class="full" style="display:flex;gap:10px"><button class="btn primary" style="flex:1">Save patient</button><button class="btn teal" name="then" value="analyze" style="flex:1">Save &amp; upload scan</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

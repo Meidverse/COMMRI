@@ -1,0 +1,15 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block form %}
+<div class="label">Secure access</div>
+<h2>Sign in to your workspace</h2>
+<p>Use your unique user ID (e.g. NS-DR-0001) or registered email.</p>
+<form method="post" class="grid" style="gap:16px">
+  <label class="field"><span>User ID or email</span><input class="input" name="identifier" required autofocus placeholder="NS-DR-0001 or name@hospital.org"></label>
+  <label class="field"><span>Password</span><input class="input" type="password" name="password" required placeholder="••••••••"></label>
+  <button class="btn primary block" style="height:46px;margin-top:6px">Sign in {{ icon('arrow') }}</button>
+</form>
+<div class="divider">New to NeuroScan?</div>
+<a class="btn block" href="{{ url_for('register') }}">Create a doctor or technician account</a>
+<p class="note" style="margin-top:26px">{{ icon('shield') }} Passwords are stored as salted hashes. Every analysis and report is stamped with the signed-in user's ID.</p>
+{% endblock %}

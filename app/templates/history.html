@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Analysis History{% endblock %}
+{% block sub %}Every analysis performed in the system, with its patient, finding and review status.{% endblock %}
+{% block actions %}<a class="btn teal" href="{{ url_for('analyze') }}">{{ icon('upload') }} New analysis</a>{% endblock %}
+{% block content %}
+<div class="card table-wrap">
+  <form class="toolbar" method="get">
+    <div class="search">{{ icon('search') }}<input class="input" name="q" value="{{ q }}" placeholder="Search patient name, patient ID or analysis ID…"></div>
+    <select name="modality" data-autosubmit><option value="">All modalities</option>{% for k, c in MODALITIES.items() %}<option value="{{ k }}" {{ 'selected' if modality == k }}>{{ c.name }}</option>{% endfor %}</select>
+    <div class="seg">
+      {% for v, t in [('', 'All'), ('abnormal', 'Abnormal'), ('normal', 'Normal'), ('pending', 'Pending review')] %}
+      <a href="{{ url_for('history', q=q, modality=modality, result=v) }}" class="{{ 'on' if res == v }}">{{ t }}</a>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="result" value="{{ res }}">
+  </form>
+  <table class="table">
+    <thead><tr><th>Scan</th><th>Analysis ID</th><th>Patient</th><th>Modality</th><th>AI finding</th><th>Confidence</th><th>Performed by</th><th>Date &amp; time</th><th>Review</th><th></th></tr></thead>
+    <tbody>
+    {% for a in rows %}
+    <tr>
+      <td><img class="thumb" src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt=""></td>
+      <td class="mono">{{ a.analysis_code }}</td>
+      <td class="who"><b>{{ a.patient_name }}</b><span>{{ a.patient_code }}</span></td>
+      <td><span class="tag">{{ MODALITIES[a.modality].name }}</span></td>
+      <td><span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ a.label }}</span></td>
+      <td class="mono">{{ a.confidence|pct }}</td>
+      <td>{{ a.user_name }}</td>
+      <td class="mono muted">{{ a.created_at }}</td>
+      <td>{% if a.reviewed_by %}<span class="chip ok plain">Reviewed</span>{% else %}<span class="chip warn plain">Pending</span>{% endif %}</td>
+      <td style="white-space:nowrap"><a class="btn sm" href="{{ url_for('result', aid=a.id) }}">Open</a> <a class="btn sm ghost" href="{{ url_for('report', aid=a.id) }}" title="Report">{{ icon('file') }}</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="10"><div class="empty-state"><b>No analyses match</b>Try a different search or filter.</div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;justify-content:space-between"><span class="muted">Showing {{ rows|length }} of {{ total }} analyses</span><span class="mono muted">Stored in SQLite · neuroscan.db</span></div>
+</div>
+{% endblock %}

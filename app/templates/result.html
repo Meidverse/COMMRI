@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Analysis Result{% endblock %}
+{% block crumbs %}<a href="{{ url_for('history') }}">History</a> / {{ a.analysis_code }}{% endblock %}
+{% block heading %}Analysis result{% endblock %}
+{% block sub %}{{ a.patient_name }} · {{ a.patient_code }} · {{ m[a.modality].name }} · {{ a.created_at }}{% endblock %}
+{% block actions %}
+<a class="btn" href="{{ url_for('processing', aid=a.id) }}">{{ icon('layers') }} Image processing</a>
+<a class="btn primary" href="{{ url_for('report', aid=a.id) }}">{{ icon('file') }} Generate report</a>
+{% endblock %}
+{% block content %}
+<div class="grid g-main">
+  <div class="grid" style="align-content:start">
+    <div class="viewer" id="viewer" style="--blend:.7">
+      <div class="stage">
+        <img src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt="Input scan">
+        <img class="ovl" src="{{ url_for('media', code=a.analysis_code, name='overlay.png') }}" alt="Grad-CAM overlay">
+        <span class="corner c1"></span><span class="corner c2"></span><span class="corner c3"></span><span class="corner c4"></span>
+        <div class="scan-line"></div>
+        <div class="meta tl"><b>{{ a.patient_name|upper }}</b><br>{{ a.patient_code }} · {{ a.age or '—' }}{{ (a.sex or '')[:1] }}<br>{{ m[a.modality].name|upper }}{% if a.modality == 'xray' %} · {{ a.body_part|upper }}{% endif %}</div>
+        <div class="meta tr">{{ a.details.image_w }}×{{ a.details.image_h }} PX<br>INPUT 224×224<br>{{ a.inference_ms }} MS</div>
+        <div class="meta bl">{{ a.analysis_code }}<br>{{ a.created_at }}</div>
+        <div class="meta br">GRAD-CAM<br>{{ m[a.modality].arch.split(' — ')[0].split(' (')[0]|upper }}</div>
+      </div>
+      <div class="viewer-bar">
+        <span>SCAN</span><input type="range" id="blend" min="0" max="100" value="70"><span>HEAT-MAP <b id="blendVal" style="color:#e8f1f8">70%</b></span>
+        <span class="legend"></span><span>LOW → HIGH</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>Visual explanation</h3><span class="label">Grad-CAM · last convolutional block</span></div>
+      <div class="card-b frames" style="grid-template-columns:repeat(3,1fr)">
+        {% for n, t, s in [('original.png','Input image','As uploaded'), ('heatmap.png','Attention map','Gradient-weighted activations'), ('overlay.png','Overlay','Regions driving the prediction')] %}
+        <figure class="frame"><div class="img"><img src="{{ url_for('media', code=a.analysis_code, name=n) }}" alt=""></div><figcaption><b>{{ t }}</b><span>{{ s }}</span></figcaption></figure>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" style="align-content:start">
+    <div class="verdict {{ 'bad' if a.abnormal else 'ok' }}">
+      <div>
+        <span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ ('Tumour detected' if a.modality == 'mri' else 'Fracture detected') if a.abnormal else 'Normal finding' }}</span>
+        <h2>{{ a.label }}</h2>
+        <p>{{ a.details.description }}</p>
+      </div>
+      <div class="dial" style="--p:{{ (a.confidence * 100)|round(1) }}"><div><b>{{ '%.1f'|format(a.confidence * 100) }}<small style="font-size:13px">%</small></b><span>Confidence</span></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Class probabilities</h3><span class="label">Softmax output</span></div>
+      <div class="card-b">
+        {% for k, v in a.probabilities|dictsort(by='value', reverse=true) %}
+        <div class="pbar {{ 'top' if loop.first }} {{ 'bad' if loop.first and a.abnormal }}"><span class="name">{{ k }}</span><div class="track"><div class="fill" style="--w:{{ (v * 100)|round(2) }}%"></div></div><span class="v">{{ v|pct }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Analysis details</h3></div>
+      <div class="card-b">
+        <dl class="kv">
+          <dt>Analysis ID</dt><dd class="mono">{{ a.analysis_code }}</dd>
+          <dt>AI model</dt><dd>{{ m[a.modality].arch.split(' — ')[0].split(' (')[0] }}</dd>
+          <dt>Uploaded file</dt><dd class="mono">{{ a.original_filename }}</dd>
+          <dt>Performed by</dt><dd>{{ a.user_name }} <span class="tag">{{ a.user_code }}</span></dd>
+          <dt>Processing time</dt><dd class="mono">{{ a.inference_ms }} ms</dd>
+          <dt>Review status</dt><dd>{% if a.reviewed_by %}<span class="chip ok">Reviewed by {{ a.reviewer_name }}</span>{% else %}<span class="chip warn">Awaiting review</span>{% endif %}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Doctor's review</h3>{% if a.reviewed_at %}<span class="mono muted">{{ a.reviewed_at }}</span>{% endif %}</div>
+      <div class="card-b">
+        {% if g.user.role in ('doctor', 'admin') %}
+        <form method="post" action="{{ url_for('remarks', aid=a.id) }}" class="grid" style="gap:12px">
+          <textarea name="remarks" placeholder="Clinical remarks, correlation with symptoms, recommended follow-up…">{{ a.remarks or '' }}</textarea>
+          <button class="btn primary">{{ icon('check') }} Save review</button>
+        </form>
+        {% else %}
+        <p style="margin:0">{{ a.remarks or 'Awaiting doctor review. Technicians cannot sign off analyses.' }}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

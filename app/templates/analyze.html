@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}New Analysis{% endblock %}
+{% block heading %}Upload a medical image{% endblock %}
+{% block sub %}Select the patient and imaging modality, then upload the scan for AI analysis.{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="grid g-main" id="analyzeForm">
+  <div class="card">
+    <div class="card-b grid" style="gap:24px">
+      <div class="grid" style="gap:10px">
+        <div class="label">Step 1 · Patient</div>
+        <div style="display:flex;gap:10px">
+          <select name="patient" required style="flex:1">
+            <option value="">Select a registered patient…</option>
+            {% for p in patients %}<option value="{{ p.id }}" {{ 'selected' if sel_patient == p.id }}>{{ p.patient_code }} — {{ p.full_name }}{% if p.age %} · {{ p.age }}{{ p.sex[:1] if p.sex }}{% endif %}</option>{% endfor %}
+          </select>
+          <a class="btn" href="{{ url_for('patients') }}#new">{{ icon('plus') }} New patient</a>
+        </div>
+      </div>
+      <div class="grid" style="gap:10px">
+        <div class="label">Step 2 · Imaging modality</div>
+        <div class="modal-cards">
+          {% for k, cfg in MODALITIES.items() %}
+          <label class="mcard {{ 'off' if not available[k] }}">
+            <input type="radio" name="modality" value="{{ k }}" {{ 'checked' if sel_modality == k and available[k] }} {{ 'disabled' if not available[k] }}>
+            <div class="ico">{{ icon('brain' if k == 'mri' else 'bone') }}</div>
+            <b>{{ cfg.name }}</b><span>{{ cfg.task }} · {{ cfg.classes|length }} classes{% if not available[k] %} · model not loaded{% endif %}</span>
+          </label>
+          {% endfor %}
+        </div>
+        <div id="bodyPart" style="display:none">
+          <label class="field" style="max-width:280px"><span>Body region (X-ray)</span>
+            <select name="body_part"><option>Upper limb</option><option>Lower limb</option><option>Hand / Wrist</option><option>Elbow</option><option>Shoulder</option><option>Hip / Pelvis</option><option>Knee</option><option>Ankle / Foot</option></select>
+          </label>
+        </div>
+      </div>
+      <div class="grid" style="gap:10px">
+        <div class="label">Step 3 · Medical image</div>
+        <label class="drop" id="drop">
+          <input type="file" name="image" id="file" accept=".jpg,.jpeg,.png,.bmp,.tif,.tiff" hidden required>
+          <div><div class="ring">{{ icon('upload') }}</div><b>Drop the scan here or click to browse</b><span class="muted">JPG · PNG · BMP · TIFF — up to 20 MB</span></div>
+          <div class="preview"><img id="previewImg" alt=""><div class="pmeta" id="pmeta"></div></div>
+        </label>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:flex-end">
+        <a class="btn" href="{{ url_for('dashboard') }}">Cancel</a>
+        <button class="btn teal" style="min-width:200px">{{ icon('scan') }} Run AI analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid" style="align-content:start">
+    <div class="card">
+      <div class="card-h"><h3>What happens next</h3></div>
+      <div class="card-b">
+        {% for t, d in [('Validate', 'File type, resolution and greyscale check'), ('Preprocess', 'RGB conversion · resize 224×224 · normalisation'), ('Analyse', 'CNN inference and class probabilities'), ('Explain', 'Grad-CAM heat-map of decisive regions'), ('Record', 'Saved to patient history and report')] %}
+        <div class="check"><div class="ic"><span class="mono" style="font-size:11px">{{ loop.index }}</span></div><b>{{ t }}</b><span style="font-family:var(--body);font-size:12.5px">{{ d }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="disclaimer">{{ icon('alert') }}<div>Results are decision-support only and are not a medical diagnosis. Every AI finding must be reviewed by a qualified doctor before clinical use.</div></div>
+  </div>
+</form>
+<div class="busy" id="busy"><div class="box"><div class="scanner"></div><h3>Analysing scan…</h3><p class="muted">Preprocessing · running CNN · computing Grad-CAM</p></div></div>
+{% endblock %}

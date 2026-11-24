@@ -1,0 +1,87 @@
+{
+  "model": "TumorCNN (VGG-style 2D CNN)",
+  "classes": [
+    "glioma",
+    "meningioma",
+    "notumor",
+    "pituitary"
+  ],
+  "dataset": {
+    "name": "Kaggle Brain Tumor MRI",
+    "total": 7023,
+    "train_note": "trained 50 epochs, AdamW, OneCycleLR, batch 32"
+  },
+  "test": {
+    "accuracy": 0.9395,
+    "precision_macro": 0.94,
+    "recall_macro": 0.94,
+    "f1_macro": 0.94,
+    "per_class": {
+      "glioma": {
+        "recall": 0.981
+      },
+      "meningioma": {
+        "recall": 0.839
+      },
+      "notumor": {
+        "recall": 0.985
+      },
+      "pituitary": {
+        "recall": 0.943
+      }
+    }
+  },
+  "verification": {
+    "images": 1141,
+    "accuracy": 0.9482909728308502,
+    "per_class": {
+      "glioma": {
+        "precision": 0.9230769230769231,
+        "recall": 0.9565217391304348,
+        "f1": 0.9395017793594306
+      },
+      "meningioma": {
+        "precision": 0.9556451612903226,
+        "recall": 0.8777777777777778,
+        "f1": 0.915057915057915
+      },
+      "notumor": {
+        "precision": 0.9675324675324676,
+        "recall": 0.9867549668874173,
+        "f1": 0.9770491803278688
+      },
+      "pituitary": {
+        "precision": 0.9464882943143813,
+        "recall": 0.9658703071672355,
+        "f1": 0.956081081081081
+      }
+    },
+    "confusion_matrix": [
+      [
+        264,
+        5,
+        0,
+        7
+      ],
+      [
+        16,
+        237,
+        9,
+        8
+      ],
+      [
+        3,
+        0,
+        298,
+        1
+      ],
+      [
+        3,
+        6,
+        1,
+        283
+      ]
+    ],
+    "note": "Re-evaluation on a separate copy of the Kaggle test folder; some images may overlap the original training pool."
+  }
+}

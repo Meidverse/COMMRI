@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ p.full_name }}{% endblock %}
+{% block crumbs %}<a href="{{ url_for('patients') }}">Patients</a> / {{ p.patient_code }}{% endblock %}
+{% block sub %}{{ p.patient_code }} · {{ p.age or '—' }} years · {{ p.sex or '—' }}{% if p.blood_group %} · {{ p.blood_group }}{% endif %}{% endblock %}
+{% block actions %}<a class="btn teal" href="{{ url_for('analyze', patient=p.id) }}">{{ icon('upload') }} New scan for patient</a>{% endblock %}
+{% block content %}
+<div class="grid g-main">
+  <div class="card table-wrap">
+    <div class="card-h" style="padding-bottom:14px"><h3>Imaging history</h3><span class="label">{{ rows|length }} analyses</span></div>
+    <table class="table">
+      <thead><tr><th>Scan</th><th>Analysis ID</th><th>Modality</th><th>Finding</th><th>Confidence</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+      {% for a in rows %}
+      <tr><td><img class="thumb" src="{{ url_for('media', code=a.analysis_code, name='original.png') }}" alt=""></td><td class="mono">{{ a.analysis_code }}</td>
+        <td><span class="tag">{{ MODALITIES[a.modality].name }}</span></td><td><span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ a.label }}</span></td>
+        <td class="mono">{{ a.confidence|pct }}</td><td class="mono muted">{{ a.created_at }}</td><td><a class="btn sm" href="{{ url_for('result', aid=a.id) }}">Open</a></td></tr>
+      {% else %}<tr><td colspan="7"><div class="empty-state"><b>No scans yet</b>Upload this patient's first image.</div></td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card" style="align-self:start">
+    <div class="card-h"><h3>Patient details</h3></div>
+    <div class="card-b"><dl class="kv">
+      <dt>Patient ID</dt><dd class="mono">{{ p.patient_code }}</dd><dt>Phone</dt><dd>{{ p.phone or '—' }}</dd>
+      <dt>Blood group</dt><dd>{{ p.blood_group or '—' }}</dd><dt>Referred by</dt><dd>{{ p.referred_by or '—' }}</dd><dt>Registered</dt><dd class="mono">{{ p.created_at }}</dd>
+    </dl>
+    <div class="label" style="margin:18px 0 6px">Clinical history</div><p style="margin:0">{{ p.history or '—' }}</p></div>
+  </div>
+</div>
+{% endblock %}
