@@ -1,11 +1,8 @@
 # Render Blueprint — NeuroScan AI (web app + managed PostgreSQL)
-# Deploy: Render Dashboard → New → Blueprint → select this repo.
-# Region/database name are permanent once created.
+# Render links DATABASE_URL to the database automatically (fromDatabase) — no password is stored in the repo.
 databases:
   - name: neuroscan-db
-    databaseName: neuroscan
-    user: neuroscan
-    plan: free            # free Postgres expires after 30 days; use basic-256mb to keep it
+    plan: free            # free Postgres expires after 30 days; upgrade to basic-256mb to keep it
     region: singapore
     postgresMajorVersion: "16"
 
@@ -14,7 +11,7 @@ services:
     name: neuroscan-ai
     runtime: python
     region: singapore
-    plan: starter         # 512 MB RAM; use "standard" (2 GB) if the service runs out of memory
+    plan: free            # upgrade to starter/standard for no sleep and more memory
     buildCommand: pip install -r requirements-render.txt
     startCommand: gunicorn --chdir app app:app --workers 1 --threads 4 --timeout 180 --bind 0.0.0.0:$PORT
     healthCheckPath: /healthz
@@ -28,11 +25,7 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
-      - key: ADMIN_NAME
-        value: Administrator
-      - key: ADMIN_EMAIL
-        sync: false        # entered in the Dashboard when the Blueprint is created
-      - key: ADMIN_PASSWORD
-        sync: false
+      - key: AUTO_DEMO        # fill an empty database with demo patients/analyses (only when empty)
+        value: "1"
       - key: OMP_NUM_THREADS
         value: "2"
