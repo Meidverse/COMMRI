@@ -297,6 +297,9 @@ def analyze():
         err = "Choose an image file to upload."
     elif os.path.splitext(f.filename)[1].lower() not in ALLOWED_EXT:
         err = "Unsupported file type. Upload JPG, PNG, BMP or TIFF."
+    elif modality == "xray" and request.form.get("body_part") not in ml.MODALITIES["xray"]["regions"]:
+        err = ("The fracture model was trained only on hand, wrist, forearm and elbow X-rays, so it cannot assess "
+               f"{(request.form.get('body_part') or 'this region').lower()} X-rays reliably. Please refer this scan to a radiologist.")
     if err is None:
         try:
             img = Image.open(f.stream)

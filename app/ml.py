@@ -74,6 +74,10 @@ MODALITIES = {
         "arch": "MobileNetV3-Large (ImageNet pre-trained, fine-tuned)",
         "params": "4.2 M",
         "classes": ["fractured", "not fractured"],
+        # below this the answer is "Inconclusive" (chosen on the held-out test set, scripts/xray_confidence.py)
+        "min_confidence": 0.85,
+        # training data is almost all hand / wrist / forearm / elbow; other regions are refused
+        "regions": ["Hand / Wrist", "Forearm", "Elbow"],
         "labels": {
             "fractured": ("Fracture Detected", True, "Image pattern consistent with a bone fracture. Correlate clinically and review the highlighted region."),
             "not fractured": ("No Fracture Detected", False, "No fracture pattern was identified by the model in this radiograph."),
@@ -238,6 +242,11 @@ def run_analysis(modality, img: Image.Image, out_dir):
 
     key = cfg["classes"][idx]
     label, abnormal, desc = cfg["labels"][key]
+    cut = cfg.get("min_confidence")
+    if cut and probs[idx] < cut:   # model is unsure: don't give a yes/no answer
+        key, label, abnormal = "inconclusive", "Inconclusive", True
+        desc = (f"The model is not confident enough to decide (top score {probs[idx] * 100:.1f}%, needs {cut * 100:.0f}%). "
+                "Refer this image to a radiologist.")
     return {
         "prediction": key,
         "label": label,

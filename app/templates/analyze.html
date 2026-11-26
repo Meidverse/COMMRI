@@ -29,7 +29,8 @@
         </div>
         <div id="bodyPart" style="display:none">
           <label class="field" style="max-width:280px"><span>Body region (X-ray)</span>
-            <select name="body_part"><option>Upper limb</option><option>Lower limb</option><option>Hand / Wrist</option><option>Elbow</option><option>Shoulder</option><option>Hip / Pelvis</option><option>Knee</option><option>Ankle / Foot</option></select>
+            <select name="body_part">{% for r in MODALITIES.xray.regions %}<option>{{ r }}</option>{% endfor %}<optgroup label="Not supported by this model"><option>Shoulder</option><option>Hip / Pelvis</option><option>Knee</option><option>Ankle / Foot</option><option>Other</option></optgroup></select>
+            <div class="muted" style="font-size:12px;margin-top:6px">The fracture model was trained on hand, wrist, forearm and elbow X-rays only.</div>
           </label>
         </div>
       </div>

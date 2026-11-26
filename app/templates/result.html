@@ -34,7 +34,7 @@
   <div class="grid" style="align-content:start">
     <div class="verdict {{ 'bad' if a.abnormal else 'ok' }}">
       <div>
-        <span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ ('Tumour detected' if a.modality == 'mri' else 'Fracture detected') if a.abnormal else 'Normal finding' }}</span>
+        <span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ 'Needs radiologist review' if a.prediction == 'inconclusive' else (('Tumour detected' if a.modality == 'mri' else 'Fracture detected') if a.abnormal else 'Normal finding') }}</span>
         <h2>{{ a.label }}</h2>
         <p>{{ a.details.description }}</p>
       </div>
