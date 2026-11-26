@@ -24,6 +24,8 @@ import db as dbm
 import ml
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
+XRAY_NOTE = ("Research prototype. On an independent set of 4,083 X-rays this model detected about half of all "
+             "fractures, so a normal-looking result does not rule out a fracture. A radiologist must review every X-ray.")
 IMAGE_NAMES = ("original.png", "resized.png", "normalized.png", "enhanced.png")
 ROLES = {"admin": "Administrator", "doctor": "Doctor", "patient": "Patient"}
 ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "patient": "NS-PA-"}
@@ -98,7 +100,8 @@ app.jinja_env.globals.update(icon=_icons.icon, logo=_icons.logo)
 
 @app.context_processor
 def inject():
-    return {"ROLES": ROLES, "MODALITIES": ml.MODALITIES, "nav": request.endpoint, "now_hour": datetime.now().hour}
+    return {"ROLES": ROLES, "MODALITIES": ml.MODALITIES, "nav": request.endpoint, "now_hour": datetime.now().hour,
+            "XRAY_NOTE": XRAY_NOTE}
 
 
 @app.template_filter("pct")

@@ -28,6 +28,7 @@
       <div><div class="label">{{ 'Inconclusive' if a.prediction == 'inconclusive' else ('Abnormal' if a.abnormal else 'Normal') }}</div><h3>{{ a.label }}</h3><div class="muted" style="max-width:52ch">{{ a.details.description }}</div></div>
       <div style="text-align:right"><div class="label">Confidence</div><h3 class="mono" style="font-size:26px">{{ a.confidence|pct }}</h3></div>
     </div>
+    {% if a.modality == 'xray' %}<p class="muted" style="font-size:12px;margin-top:8px">{{ XRAY_NOTE }}</p>{% endif %}
   </section>
 
   <section class="rp-sec">

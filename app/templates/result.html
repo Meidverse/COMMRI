@@ -37,6 +37,7 @@
         <span class="chip {{ 'bad' if a.abnormal else 'ok' }}">{{ 'Needs radiologist review' if a.prediction == 'inconclusive' else (('Tumour detected' if a.modality == 'mri' else 'Fracture detected') if a.abnormal else 'Normal finding') }}</span>
         <h2>{{ a.label }}</h2>
         <p>{{ a.details.description }}</p>
+        {% if a.modality == 'xray' %}<p style="font-size:12px;opacity:.8">{{ XRAY_NOTE }}</p>{% endif %}
       </div>
       <div class="dial" style="--p:{{ (a.confidence * 100)|round(1) }}"><div><b>{{ '%.1f'|format(a.confidence * 100) }}<small style="font-size:13px">%</small></b><span>Confidence</span></div></div>
     </div>

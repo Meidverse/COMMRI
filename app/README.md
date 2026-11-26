@@ -41,8 +41,15 @@ Demo patients are fictional. Every demo analysis is real model output (images up
 
 ## Models
 - MRI: `kaggle_tumor_2dcnn_best.pth` — TumorCNN, 93.95 % test accuracy (training-time held-out split).
-- X-ray: `xray_fracture_mnv3.pth` — MobileNetV3-Large fine-tuned by `scripts\train_xray.py`;
-  97.7 % accuracy on 383 unseen test images after removing duplicate files from the Kaggle split.
+- X-ray: `xray_fracture_mnv3.pth` — MobileNetV3-Large fine-tuned by `scripts\train_xray.py`.
+  - 97.7 % accuracy on 383 held-out images **from the same Kaggle dataset** (after removing duplicate files).
+  - **On an independent dataset (FracAtlas, 4,083 X-rays) it found only 50 % of fractures and cleared 78 % of
+    normal X-rays** (hand 39 % / 78 %, leg 65 % / 88 %, hip and shoulder normals almost always flagged).
+    The Kaggle number does not carry over to real-world X-rays.
+  - The app therefore accepts only hand / wrist / forearm / elbow X-rays and answers "Inconclusive" below 85 %
+    confidence. Treat X-ray output as a research prototype, not a diagnosis.
+  - v2 (`scripts\train_xray_v2.py`, Kaggle + FracAtlas, body-part head) is opt-in with `XRAY_MODEL=v2`
+    once `xray_fracture_v2.pth` exists; results in `app/model_meta/xray_v2_metrics.json`.
 
 ## Scripts
 - `scripts\train_xray.py` — train the X-ray model
