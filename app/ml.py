@@ -135,37 +135,7 @@ def _sim(modality, x):
     return s, th, (s - th) / (med - th)   # score: 0 at threshold, 1 at typical training image
 
 
-def _split_views(img: Image.Image):
-    """Candidate panel splits for multi-view films (e.g. knee AP + LAT side by side)."""
-    w, h = img.size
-    out = []
-    if w / h > 1.15:
-        out += [[img.crop((round(i * w / k), 0, round((i + 1) * w / k), h)) for i in range(k)] for k in (2, 3)]
-    if h / w > 1.15:
-        out += [[img.crop((0, round(i * h / k), w, round((i + 1) * h / k))) for i in range(k)] for k in (2, 3)]
-    return out
-
-
-def select_views(modality, img: Image.Image):
-    """(ok, similarity, threshold, views). views is None when the whole image is used as one scan.
-    A multi-view film is accepted only if most of its panels look like real scans of this modality."""
-    ok, s, th = _check_one(modality, img)
-    if ok or s is None:
-        return ok, s, th, None
-    for panels in _split_views(img):
-        res = [_check_one(modality, p) for p in panels]
-        good = [p for p, r in zip(panels, res) if r[0]]
-        if len(good) * 2 > len(panels):
-            return True, max(r[1] for r in res), th, good
-    return False, s, th, None
-
-
 def domain_check(modality, img: Image.Image):
-    ok, s, th, _ = select_views(modality, img)
-    return ok, s, th
-
-
-def _check_one(modality, img: Image.Image):
     """Accept only if the image resembles this model's training scans and is classified as this modality."""
     if not os.path.exists(os.path.join(APP_DIR, "model_meta", f"{modality}_ood.npz")):
         return True, None, None
@@ -194,10 +164,9 @@ def validate(img: Image.Image, modality=None):
         ("Greyscale medical image", colourful < 0.03, f"{colourful * 100:.1f}% coloured pixels"),
     ]
     if modality and all(c[1] for c in checks):
-        ok, sim, th, views = select_views(modality, img)
+        ok, sim, th = domain_check(modality, img)
         if sim is not None:
-            extra = f" · {len(views)} views" if views else ""
-            checks.append((f"Recognised as {MODALITIES[modality]['name']} scan", ok, f"similarity {sim:.2f} (min {th:.2f}){extra}"))
+            checks.append((f"Recognised as {MODALITIES[modality]['name']} scan", ok, f"similarity {sim:.2f} (min {th:.2f})"))
     return all(c[1] for c in checks), checks
 
 
@@ -262,19 +231,13 @@ def run_analysis(modality, img: Image.Image, out_dir):
     hist = np.histogram(gray, bins=32, range=(0, 255))[0]
 
     model, _ = get_model(modality)
-    views = select_views(modality, img)[3]
     with torch.no_grad():
-        if views:   # multi-view film: score every view and average
-            probs = torch.cat([torch.softmax(model(preprocess(v)[0]), 1) for v in views]).mean(0).numpy()
-        else:
-            probs = torch.softmax(model(tensor), 1)[0].numpy()
+        probs = torch.softmax(model(tensor), 1)[0].numpy()
     idx = int(probs.argmax())
     ms = (time.perf_counter() - t0) * 1000
 
     key = cfg["classes"][idx]
     label, abnormal, desc = cfg["labels"][key]
-    if views:
-        desc += f" Multi-view image: {len(views)} views were analysed separately and combined."
     return {
         "prediction": key,
         "label": label,
