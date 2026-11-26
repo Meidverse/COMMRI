@@ -87,6 +87,45 @@ MODALITIES = {
 
 _models = {}
 
+# ---------------------------------------------------------------- X-ray model v2 (opt-in: XRAY_MODEL=v2)
+# Trained by scripts/train_xray_v2.py on Kaggle + FracAtlas with a second head that names the body part.
+# Off by default until its test results are reviewed; validation still uses the v1 features.
+XRAY_V2_WEIGHTS = os.path.join(ROOT, "xray_fracture_v2.pth")
+XRAY_REGIONS = ["hand", "leg", "hip", "shoulder", "mixed"]
+
+
+class XrayNet(nn.Module):
+    """MobileNetV3-Large with two heads: fracture (0=no, 1=yes) and body part (XRAY_REGIONS)."""
+
+    def __init__(self):
+        super().__init__()
+        m = tvm.mobilenet_v3_large(weights=None)
+        self.features, self.avgpool = m.features, m.avgpool
+        self.neck = nn.Sequential(m.classifier[0], m.classifier[1], m.classifier[2])
+        self.fracture = nn.Linear(1280, 2)
+        self.region = nn.Linear(1280, len(XRAY_REGIONS))
+
+    def forward(self, x):
+        h = self.neck(self.avgpool(self.features(x)).flatten(1))
+        return self.fracture(h), self.region(h)
+
+
+def use_xray_v2():
+    return os.environ.get("XRAY_MODEL", "v1") == "v2" and os.path.exists(XRAY_V2_WEIGHTS)
+
+
+def xray_v2_predict(img: Image.Image):
+    """(p_fracture, region_name, region_prob) with the v2 input pipeline: grey 256x256, centre crop 224."""
+    if "xray_v2" not in _models:
+        m = XrayNet(); m.load_state_dict(torch.load(XRAY_V2_WEIGHTS, map_location="cpu")); m.eval()
+        _models["xray_v2"] = m
+    g = np.asarray(img.convert("L").resize((256, 256), Image.BILINEAR), dtype=np.float32)[16:240, 16:240] / 255.0
+    x = (np.repeat(g[..., None], 3, 2) - MEAN) / STD
+    with torch.no_grad():
+        f, r = _models["xray_v2"](torch.from_numpy(x.transpose(2, 0, 1)).unsqueeze(0).float())
+    pf = float(torch.softmax(f, 1)[0, 1]); pr = torch.softmax(r, 1)[0]
+    return pf, XRAY_REGIONS[int(pr.argmax())], float(pr.max())
+
 
 def available(modality):
     return os.path.exists(MODALITIES[modality]["weights"])
@@ -234,15 +273,23 @@ def run_analysis(modality, img: Image.Image, out_dir):
     Image.fromarray(clahe).save(os.path.join(out_dir, "enhanced.png"))
     hist = np.histogram(gray, bins=32, range=(0, 255))[0]
 
-    model, _ = get_model(modality)
-    with torch.no_grad():
-        probs = torch.softmax(model(tensor), 1)[0].numpy()
+    region = None
+    if modality == "xray" and use_xray_v2():
+        pf, region, rp = xray_v2_predict(img)
+        probs = np.array([pf, 1 - pf])            # order of cfg["classes"]: fractured, not fractured
+        cut = cfg.get("min_confidence_v2")
+    else:
+        model, _ = get_model(modality)
+        with torch.no_grad():
+            probs = torch.softmax(model(tensor), 1)[0].numpy()
+        cut = cfg.get("min_confidence")
     idx = int(probs.argmax())
     ms = (time.perf_counter() - t0) * 1000
 
     key = cfg["classes"][idx]
     label, abnormal, desc = cfg["labels"][key]
-    cut = cfg.get("min_confidence")
+    if region:
+        desc += f" Body part recognised by the model: {region} ({rp * 100:.0f}%)."
     if cut and probs[idx] < cut:   # model is unsure: don't give a yes/no answer
         key, label, abnormal = "inconclusive", "Inconclusive", True
         desc = (f"The model is not confident enough to decide (top score {probs[idx] * 100:.1f}%, needs {cut * 100:.0f}%). "
