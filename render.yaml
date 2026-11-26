@@ -1,5 +1,5 @@
 # Render Blueprint — NeuroScan AI (web app + managed PostgreSQL)
-# Render links DATABASE_URL to the database automatically (fromDatabase) — no password is stored in the repo.
+# DATABASE_URL (Neon) is set in the dashboard; MIGRATE_FROM_URL is linked by Render — no password is stored in the repo.
 databases:
   - name: neuroscan-db
     plan: free            # free Postgres expires after 30 days; upgrade to basic-256mb to keep it
@@ -19,7 +19,12 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      # Main database: Neon free Postgres (does not expire). Set the value in the Render dashboard.
       - key: DATABASE_URL
+        sync: false
+      # One-time copy from the old Render free database (expires 2026-12-24). The app copies only into an
+      # empty database, so this is harmless after the move; remove it and the old database afterwards.
+      - key: MIGRATE_FROM_URL
         fromDatabase:
           name: neuroscan-db
           property: connectionString

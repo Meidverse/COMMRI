@@ -33,6 +33,7 @@ ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "patient": "NS-PA-"}
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 dbm.init_db()
+dbm.migrate_from(os.environ.get("MIGRATE_FROM_URL"))  # one-time move to a new database (no-op if already filled)
 if os.environ.get("SECRET_KEY"):
     app.secret_key = os.environ["SECRET_KEY"]
 else:  # local development: keep a generated key in the instance folder

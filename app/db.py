@@ -182,6 +182,36 @@ def init_db():
     con.close()
 
 
+MIGRATE_TABLES = ("users", "patients", "analyses", "images")  # FK-safe order (users.patient_id has no FK)
+
+
+def migrate_from(source_url):
+    """One-time copy of every row from another PostgreSQL database into this one.
+
+    Runs only when this database has no users yet, so it is safe to leave enabled across restarts.
+    Used to move off an expiring free database: set MIGRATE_FROM_URL to the old database and
+    DATABASE_URL to the new one, deploy once, then remove MIGRATE_FROM_URL."""
+    if not (IS_PG and source_url and source_url.strip() != DATABASE_URL):
+        return 0
+    import psycopg
+    with psycopg.connect(DATABASE_URL) as dst, psycopg.connect(source_url.strip()) as src:
+        if dst.execute("SELECT COUNT(*) FROM users").fetchone()[0]:
+            return 0
+        copied = 0
+        for t in MIGRATE_TABLES:
+            cur = src.execute(f"SELECT * FROM {t} ORDER BY id")
+            cols = [d.name for d in cur.description]
+            rows = cur.fetchall()
+            if rows:
+                with dst.cursor() as c:
+                    c.executemany(f"INSERT INTO {t} ({','.join(cols)}) VALUES ({','.join(['%s'] * len(cols))})", rows)
+                dst.execute(f"SELECT setval(pg_get_serial_sequence('{t}','id'), (SELECT MAX(id) FROM {t}))")
+            copied += len(rows)
+        dst.commit()
+    print(f"Migrated {copied} rows from the previous database.", flush=True)
+    return copied
+
+
 def reset_db():
     """Drop all tables (used by the demo seed script)."""
     con = connect()
