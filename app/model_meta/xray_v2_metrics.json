@@ -1,0 +1,169 @@
+{
+  "model": "MobileNetV3-Large, two heads (fracture + body part)",
+  "threshold": 0.7799999999999999,
+  "epochs": 12,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 0.7921246144470278,
+      "val_auc_kaggle": 0.9743350311262027,
+      "val_auc_fracatlas": 0.8561269030128819,
+      "val_region_acc": 0.959866220735786
+    },
+    {
+      "epoch": 2,
+      "loss": 0.44870392470569403,
+      "val_auc_kaggle": 0.9981041312959819,
+      "val_auc_fracatlas": 0.8489087618439264,
+      "val_region_acc": 0.9581939799331104
+    },
+    {
+      "epoch": 3,
+      "loss": 0.35011883006318584,
+      "val_auc_kaggle": 0.9978494623655914,
+      "val_auc_fracatlas": 0.9021611838603216,
+      "val_region_acc": 0.9464882943143813
+    },
+    {
+      "epoch": 4,
+      "loss": 0.30946865726958267,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9049930799531566,
+      "val_region_acc": 0.9481605351170569
+    },
+    {
+      "epoch": 5,
+      "loss": 0.2748868965676853,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9319067390610029,
+      "val_region_acc": 0.9682274247491639
+    },
+    {
+      "epoch": 6,
+      "loss": 0.24849438528110693,
+      "val_auc_kaggle": 0.9997736276174307,
+      "val_auc_fracatlas": 0.9300755882039817,
+      "val_region_acc": 0.9765886287625418
+    },
+    {
+      "epoch": 7,
+      "loss": 0.22473425131577712,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9272223996593209,
+      "val_region_acc": 0.9698996655518395
+    },
+    {
+      "epoch": 8,
+      "loss": 0.20118260207575756,
+      "val_auc_kaggle": 0.9998585172608943,
+      "val_auc_fracatlas": 0.9281592675396572,
+      "val_region_acc": 0.9749163879598662
+    },
+    {
+      "epoch": 9,
+      "loss": 0.19170872400422673,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9458320025550943,
+      "val_region_acc": 0.9749163879598662
+    },
+    {
+      "epoch": 10,
+      "loss": 0.16630471616492168,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9346747577983606,
+      "val_region_acc": 0.9765886287625418
+    },
+    {
+      "epoch": 11,
+      "loss": 0.1618629182269285,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9339082295326306,
+      "val_region_acc": 0.9765886287625418
+    },
+    {
+      "epoch": 12,
+      "loss": 0.15990533188476666,
+      "val_auc_kaggle": 1.0,
+      "val_auc_fracatlas": 0.9329713616522943,
+      "val_region_acc": 0.9765886287625418
+    }
+  ],
+  "train_size": 5850,
+  "hardware_images_dropped": true,
+  "test": {
+    "kaggle": {
+      "n": 383,
+      "fractured": 155,
+      "auc": 0.9994057724957556,
+      "sensitivity": 0.9806451612903225,
+      "specificity": 0.9912280701754386
+    },
+    "fracatlas_all": {
+      "n": 598,
+      "fractured": 93,
+      "auc": 0.839540083040562,
+      "sensitivity": 0.4731182795698925,
+      "specificity": 0.9702970297029703
+    }
+  },
+  "test_by_region": {
+    "hand": {
+      "n": 227,
+      "fractured": 62,
+      "auc": 0.7991202346041055,
+      "sensitivity": 0.41935483870967744,
+      "specificity": 0.9454545454545454
+    },
+    "leg": {
+      "n": 329,
+      "fractured": 28,
+      "auc": 0.8153773137161842,
+      "sensitivity": 0.5714285714285714,
+      "specificity": 0.9833887043189369
+    },
+    "hip": {
+      "n": 26,
+      "fractured": 1,
+      "auc": 1.0,
+      "sensitivity": 1.0,
+      "specificity": 1.0
+    },
+    "shoulder": {
+      "n": 16,
+      "fractured": 2,
+      "auc": 0.6071428571428572,
+      "sensitivity": 0.5,
+      "specificity": 0.9285714285714286
+    },
+    "mixed": {
+      "n": 0,
+      "fractured": 0,
+      "auc": null,
+      "sensitivity": null,
+      "specificity": null
+    }
+  },
+  "region_head_accuracy": 0.9732441471571907,
+  "old_model_same_fracatlas_test": {
+    "hand": {
+      "sensitivity": 0.3225806451612903,
+      "specificity": 0.8
+    },
+    "leg": {
+      "sensitivity": 0.5714285714285714,
+      "specificity": 0.8870431893687708
+    },
+    "hip": {
+      "sensitivity": 1.0,
+      "specificity": 0.0
+    },
+    "shoulder": {
+      "sensitivity": 1.0,
+      "specificity": 0.07142857142857142
+    },
+    "mixed": {
+      "sensitivity": NaN,
+      "specificity": NaN
+    }
+  }
+}
