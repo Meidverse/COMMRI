@@ -55,6 +55,7 @@ Demo patients are fictional. Every demo analysis is real model output (images up
 
 ## Scripts
 - `scripts\train_xray.py` — train the X-ray model
+- `scripts\train_xray_v3.py` — v3 X-ray training run for a rented GPU (steps in `scripts\V3_VASTAI.md`; v2 stays live until v3 beats it)
 - `scripts\eval_mri.py` — write MRI metrics
 - `scripts\seed_demo.py` — reset DB with demo data
 - `scripts\capture_figures.py` — regenerate report screenshots into `report_figures\`

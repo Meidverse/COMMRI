@@ -56,3 +56,6 @@ htmlcov/
 app/instance/
 
 xray_train.log
+v3_work/
+v3_out/
+v3_smoke/
