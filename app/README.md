@@ -48,8 +48,10 @@ Demo patients are fictional. Every demo analysis is real model output (images up
     The Kaggle number does not carry over to real-world X-rays.
   - The app therefore accepts only hand / wrist / forearm / elbow X-rays and answers "Inconclusive" below 85 %
     confidence. Treat X-ray output as a research prototype, not a diagnosis.
-  - v2 (`scripts\train_xray_v2.py`, Kaggle + FracAtlas, body-part head) is opt-in with `XRAY_MODEL=v2`
-    once `xray_fracture_v2.pth` exists; results in `app/model_meta/xray_v2_metrics.json`.
+  - v2 (`scripts\train_xray_v2.py`, Kaggle + FracAtlas, body-part head) is used when `XRAY_MODEL=v2` (set on Render).
+    FracAtlas test: AUC 0.84; score < 0.2 = no fracture (73 % of fractures caught), 0.2-0.6 = Inconclusive,
+    >= 0.6 = fracture (96 % of normals cleared). Hip/shoulder films are refused; the body-part head cannot tell
+    forearm from leg, so knees are still not reliable. Details: `app/model_meta/xray_v2_metrics.json`.
 
 ## Scripts
 - `scripts\train_xray.py` — train the X-ray model
