@@ -23,7 +23,7 @@
     </div>
     <div class="card">
       <div class="card-h"><h3>Image processing</h3><a class="btn sm ghost" href="{{ url_for('processing', aid=a.id) }}">Details</a></div>
-      <div class="card-b frames" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card-b frames f3">
         {% for n, t, s in [('original.png','Input image','As uploaded'), ('resized.png','Resized','224 × 224 px'), ('enhanced.png','Enhanced','Contrast adjusted')] %}
         <figure class="frame"><div class="img"><img src="{{ url_for('media', code=a.analysis_code, name=n) }}" alt=""></div><figcaption><b>{{ t }}</b><span>{{ s }}</span></figcaption></figure>
         {% endfor %}

@@ -8,7 +8,7 @@
     <div class="card-b grid" style="gap:24px">
       <div class="grid" style="gap:10px">
         <div class="label">Step 1 · Patient</div>
-        <div style="display:flex;gap:10px">
+        <div class="row-wrap">
           <select name="patient" required style="flex:1">
             <option value="">Select a registered patient…</option>
             {% for p in patients %}<option value="{{ p.id }}" {{ 'selected' if sel_patient == p.id }}>{{ p.patient_code }} — {{ p.full_name }}{% if p.age %} · {{ p.age }}{{ p.sex[:1] if p.sex }}{% endif %}</option>{% endfor %}
@@ -42,9 +42,9 @@
           <div class="preview"><img id="previewImg" alt=""><div class="pmeta" id="pmeta"></div></div>
         </label>
       </div>
-      <div style="display:flex;gap:12px;justify-content:flex-end">
+      <div class="form-actions">
         <a class="btn" href="{{ url_for('dashboard') }}">Cancel</a>
-        <button class="btn teal" style="min-width:200px">{{ icon('scan') }} Run AI analysis</button>
+        <button class="btn teal run-btn">{{ icon('scan') }} Run AI analysis</button>
       </div>
     </div>
   </div>

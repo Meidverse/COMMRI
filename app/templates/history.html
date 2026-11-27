@@ -14,7 +14,7 @@
     </div>
     <input type="hidden" name="result" value="{{ res }}">
   </form>
-  <table class="table">
+  <div class="tscroll"><table class="table">
     <thead><tr><th>Scan</th><th>Analysis ID</th><th>Patient</th><th>Modality</th><th>AI finding</th><th>Confidence</th><th>Performed by</th><th>Date &amp; time</th><th>Review</th><th></th></tr></thead>
     <tbody>
     {% for a in rows %}
@@ -34,7 +34,7 @@
     <tr><td colspan="10"><div class="empty-state"><b>No analyses match</b>Try a different search or filter.</div></td></tr>
     {% endfor %}
     </tbody>
-  </table>
+  </table></div>
   <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;justify-content:space-between"><span class="muted">Showing {{ rows|length }} of {{ total }} analyses</span><span class="mono muted">Stored in SQLite · neuroscan.db</span></div>
 </div>
 {% endblock %}

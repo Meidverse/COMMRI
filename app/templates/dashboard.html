@@ -16,7 +16,7 @@
     <div class="card-h"><h3>Recent analyses</h3><a class="btn sm ghost" href="{{ url_for('history') }}">View all {{ icon('arrow') }}</a></div>
     <div class="card-b" style="padding:14px 0 0">
       {% if recent %}
-      <table class="table">
+      <div class="tscroll"><table class="table">
         <thead><tr><th>Scan</th><th>Patient</th><th>Modality</th><th>Finding</th><th>Confidence</th><th></th></tr></thead>
         <tbody>
         {% for a in recent %}
@@ -30,7 +30,7 @@
         </tr>
         {% endfor %}
         </tbody>
-      </table>
+      </table></div>
       {% else %}<div class="empty-state"><b>No analyses yet</b>Upload the first scan to get started.</div>{% endif %}
     </div>
   </div>

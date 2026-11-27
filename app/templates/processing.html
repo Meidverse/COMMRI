@@ -15,7 +15,7 @@
 
 <div class="card">
   <div class="card-h"><h3>Processing stages</h3><span class="label">{{ a.analysis_code }}</span></div>
-  <div class="card-b frames" style="grid-template-columns:repeat(4,1fr)">
+  <div class="card-b frames f4">
     {% for n, t, s, b in [
       ('original.png', 'Original image', a.details.image_w ~ '×' ~ a.details.image_h ~ ' px · as uploaded', 'INPUT'),
       ('resized.png', 'Resized', size ~ '×' ~ size ~ ' px · bilinear', '224²'),

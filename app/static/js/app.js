@@ -35,5 +35,14 @@
     const upd = () => { v.style.setProperty('--blend', blend.value / 100); out.textContent = blend.value + '%'; };
     blend.addEventListener('input', upd); upd();
   }
+  // small screens: sidebar becomes a slide-in drawer
+  const menuBtn = document.getElementById('menuBtn');
+  if (menuBtn) {
+    const setNav = (open) => { document.body.classList.toggle('nav-open', open); menuBtn.setAttribute('aria-expanded', open); };
+    menuBtn.addEventListener('click', () => setNav(!document.body.classList.contains('nav-open')));
+    document.getElementById('scrim').addEventListener('click', () => setNav(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') setNav(false); });
+    document.querySelectorAll('#sideNav a').forEach(a => a.addEventListener('click', () => setNav(false)));
+  }
   document.querySelectorAll('[data-autosubmit]').forEach(el => el.addEventListener('change', () => el.form.submit()));
 })();

@@ -4,7 +4,7 @@
 {% block content %}
 <div class="grid g-main">
   <div class="card table-wrap">
-    <table class="table">
+    <div class="tscroll"><table class="table">
       <thead><tr><th>Staff member</th><th>User ID</th><th>Role</th><th>Department</th><th>Analyses</th><th>Last login</th><th>Status</th><th></th></tr></thead>
       <tbody>
       {% for u in rows %}
@@ -18,7 +18,7 @@
       </tr>
       {% endfor %}
       </tbody>
-    </table>
+    </table></div>
   </div>
   <div class="card" style="align-self:start">
     <div class="card-h"><h3>Add staff account</h3></div>
