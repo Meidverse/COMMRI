@@ -289,7 +289,18 @@ def run_analysis(modality, img: Image.Image, out_dir):
     key = cfg["classes"][idx]
     label, abnormal, desc = cfg["labels"][key]
     if region:
-        desc += f" Body part recognised by the model: {region} ({rp * 100:.0f}%)."
+        lo, hi = cfg.get("v2_band", (0.2, 0.6))   # chosen on the FracAtlas test set: sens 0.73 at 0.2, spec 0.96 at 0.6
+        # 'leg' is not used: the body-part head calls many wrist/forearm films 'leg' (long bones look alike)
+        if region in ("hip", "shoulder") and rp >= 0.9:
+            key, label, abnormal = "inconclusive", "Inconclusive", True
+            desc = (f"This looks like a {region} X-ray ({rp * 100:.0f}%), but the model is only reliable on hand and arm "
+                    "X-rays. Refer this image to a radiologist.")
+        elif lo <= pf < hi:
+            key, label, abnormal = "inconclusive", "Inconclusive", True
+            desc = (f"The model is unsure (fracture score {pf * 100:.0f}%). Refer this image to a radiologist.")
+        else:
+            desc += f" Body part recognised by the model: {region} ({rp * 100:.0f}%)."
+        cut = None
     if cut and probs[idx] < cut:   # model is unsure: don't give a yes/no answer
         key, label, abnormal = "inconclusive", "Inconclusive", True
         desc = (f"The model is not confident enough to decide (top score {probs[idx] * 100:.1f}%, needs {cut * 100:.0f}%). "

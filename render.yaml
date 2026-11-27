@@ -32,5 +32,7 @@ services:
         generateValue: true
       - key: AUTO_DEMO        # fill an empty database with demo patients/analyses (only when empty)
         value: "1"
+      - key: XRAY_MODEL       # v2 = Kaggle + FracAtlas model with body-part check
+        value: v2
       - key: OMP_NUM_THREADS
         value: "2"

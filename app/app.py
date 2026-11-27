@@ -24,8 +24,8 @@ import db as dbm
 import ml
 
 ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
-XRAY_NOTE = ("Research prototype. On an independent set of 4,083 X-rays this model detected about half of all "
-             "fractures, so a normal-looking result does not rule out a fracture. A radiologist must review every X-ray.")
+XRAY_NOTE = ("Research prototype. On independent X-rays (FracAtlas test set) about 1 in 4 fractures was still "
+             "reported as normal, so a normal result does not rule out a fracture. A radiologist must review every X-ray.")
 IMAGE_NAMES = ("original.png", "resized.png", "normalized.png", "enhanced.png")
 ROLES = {"admin": "Administrator", "doctor": "Doctor", "patient": "Patient"}
 ROLE_PREFIX = {"admin": "NS-AD-", "doctor": "NS-DR-", "patient": "NS-PA-"}
